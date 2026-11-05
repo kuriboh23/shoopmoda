@@ -17,9 +17,10 @@ $showCountdown = $nextEndAt !== null && $flashSales !== [];
         <div class="category-head-text">
             <p class="eyebrow">Offres limitées</p>
             <h1 class="category-title">Promotions</h1>
-            <p class="category-subtitle">
-                <?= count($flashSales) ?> <?= count($flashSales) === 1 ? 'pièce en promotion' : 'pièces en promotion' ?>
-                · <?= icon('truck', 'icon icon--sm') ?> Livraison partout au Maroc
+            <p class="page-meta">
+                <span><?= count($flashSales) ?> <?= count($flashSales) === 1 ? 'pièce en promotion' : 'pièces en promotion' ?></span>
+                <span aria-hidden="true">·</span>
+                <span>Livraison partout au Maroc</span>
             </p>
         </div>
 
@@ -42,7 +43,7 @@ $showCountdown = $nextEndAt !== null && $flashSales !== [];
             <span class="empty-icon"><?= icon('tag', 'icon') ?></span>
             <h2>Aucune promotion en cours</h2>
             <p>De nouvelles offres arrivent chaque semaine. Découvrez la collection en attendant.</p>
-            <a class="btn btn--dark btn--compact" href="<?= e(url('/')) ?>">Voir la collection</a>
+            <a class="btn btn--dark btn--compact" href="<?= e(url('/produits')) ?>">Voir toutes les pièces</a>
         </div>
     <?php endif; ?>
 </section>

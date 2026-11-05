@@ -113,7 +113,7 @@ function current_method(): string
 /**
  * Build a URL that opens the store WhatsApp number with a pre-filled message.
  */
-function whatsapp_url(string $message = ''): string
+function whatsapp_url(string $message = '', bool $preserveFormatting = false): string
 {
     static $number = null;
 
@@ -123,8 +123,11 @@ function whatsapp_url(string $message = ''): string
     }
 
     if ($message !== '') {
-        $message = preg_replace('/\s+/', ' ', trim($message));
-        $message = urlencode($message);
+        if (!$preserveFormatting) {
+            $message = preg_replace('/\s+/', ' ', trim($message));
+        }
+
+        $message = rawurlencode(trim($message));
     } else {
         $message = '';
     }
@@ -279,4 +282,88 @@ function flash_sale_ends_at(): ?string
     }
 
     return null;
+}
+
+/**
+ * CSRF token bound to the current session.
+ */
+function csrf_token(): string
+{
+    $token = \App\Core\Session::get('_csrf');
+
+    if (!is_string($token) || strlen($token) < 32) {
+        $token = bin2hex(random_bytes(32));
+        \App\Core\Session::set('_csrf', $token);
+    }
+
+    return $token;
+}
+
+/**
+ * Hidden CSRF input for a POST form.
+ */
+function csrf_field(): string
+{
+    return '<input type="hidden" name="_csrf" value="' . e(csrf_token()) . '">';
+}
+
+/**
+ * Constant-time check of a submitted CSRF token.
+ */
+function csrf_verify(mixed $token): bool
+{
+    if (!is_string($token) || $token === '') {
+        return false;
+    }
+
+    return hash_equals(csrf_token(), $token);
+}
+
+/**
+ * Store a one-shot message shown on the next page.
+ */
+function flash(string $type, string $message): void
+{
+    \App\Core\Session::set('_flash', ['type' => $type, 'message' => $message]);
+}
+
+/**
+ * Read and clear the one-shot message.
+ *
+ * @return array{type: string, message: string}|null
+ */
+function flash_message(): ?array
+{
+    $flash = \App\Core\Session::get('_flash');
+
+    if (!is_array($flash) || empty($flash['message'])) {
+        return null;
+    }
+
+    \App\Core\Session::remove('_flash');
+
+    return [
+        'type'    => (string) ($flash['type'] ?? 'success'),
+        'message' => (string) $flash['message'],
+    ];
+}
+
+/**
+ * Redirect to an external URL (WhatsApp, for instance).
+ */
+function redirect_external(string $url): void
+{
+    header('Location: ' . $url, true, 302);
+    exit;
+}
+
+/**
+ * URL inside the admin area (path is configurable through ADMIN_PATH).
+ */
+function admin_url(string $path = ''): string
+{
+    $base = trim((string) config('admin_path'), '/');
+    $path = trim($path, '/');
+
+    return url('/' . $base . ($path !== '' ? '/' . $path : ''));
 }

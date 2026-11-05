@@ -182,6 +182,7 @@ require APP_PATH . '/controllers/ProductController.php';
 require APP_PATH . '/controllers/CartController.php';
 require APP_PATH . '/controllers/SearchController.php';
 require APP_PATH . '/controllers/WishlistController.php';
+require APP_PATH . '/controllers/AdminController.php';
 require APP_PATH . '/controllers/ErrorController.php';
 
 return $router;

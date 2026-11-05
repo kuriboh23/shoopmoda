@@ -23,6 +23,8 @@ return [
     'instagram_url'   => 'https://instagram.com/shoop.moda_style',
 
     'admin_path'    => trim((string) Env::get('ADMIN_PATH', 'gestion'), '/'),
+    'admin_email'    => (string) Env::get('ADMIN_EMAIL', 'admin@shoopmoda.ma'),
+    'admin_password' => (string) Env::get('ADMIN_PASSWORD', 'shoopmoda2026'),
     'cookie_secret' => (string) Env::get('COOKIE_SECRET', ''),
 
     // Top announcement bar.

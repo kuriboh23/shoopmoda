@@ -39,7 +39,7 @@ $wishCount   = $wishCount ?? 0;
     <?php endif; ?>
     <link rel="canonical" href="<?= e($canonicalUrl) ?>">
 
-    <meta name="theme-color" content="#704F38">
+    <meta name="theme-color" content="#A9552F">
     <meta name="format-detection" content="telephone=no">
 
     <meta property="og:type" content="website">
@@ -65,6 +65,17 @@ $wishCount   = $wishCount ?? 0;
     <main id="contenu" class="site-main">
         <?= $content ?>
     </main>
+
+    <div class="toast" id="smToast" role="status" aria-live="polite" hidden>
+        <p class="toast-text">
+            <?= icon('check-circle', 'icon icon--sm') ?>
+            <span data-toast-text>Article ajouté au panier</span>
+        </p>
+        <div class="toast-actions">
+            <a class="btn btn--dark btn--compact" href="<?= e(url('/panier')) ?>">Voir le panier</a>
+            <button type="button" class="btn btn--ghost btn--compact" data-toast-close>Continuer</button>
+        </div>
+    </div>
 
     <?php partial('partials/footer'); ?>
 </body>

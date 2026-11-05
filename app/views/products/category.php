@@ -20,15 +20,12 @@ $totalPages   = (int) ($products['total_pages'] ?? 1);
         <div class="category-head-text">
             <p class="eyebrow">Collection</p>
             <h1 class="category-title"><?= e($category['name'] ?? 'Catégorie') ?></h1>
-            <p class="category-subtitle">
-                <?= $total ?> <?= $total === 1 ? 'pièce disponible' : 'pièces disponibles' ?>
-                · Livraison 24-48h partout au Maroc
+            <p class="page-meta">
+                <span><?= $total ?> <?= $total === 1 ? 'pièce' : 'pièces' ?></span>
+                <span aria-hidden="true">·</span>
+                <span>Livraison 24-48h partout au Maroc</span>
             </p>
         </div>
-
-        <?php if (!empty($category['icon'])): ?>
-            <span class="category-icon" aria-hidden="true"><?= icon((string) $category['icon']) ?></span>
-        <?php endif; ?>
     </header>
 
     <?php if (!empty($products['products'])): ?>
@@ -62,7 +59,7 @@ $totalPages   = (int) ($products['total_pages'] ?? 1);
             <span class="empty-icon"><?= icon('search', 'icon') ?></span>
             <h2>Aucune pièce pour le moment</h2>
             <p>Cette collection se remplit bientôt. Découvrez nos autres modèles en attendant.</p>
-            <a class="btn btn--dark btn--compact" href="<?= e(url('/')) ?>">Retour à l'accueil</a>
+            <a class="btn btn--dark btn--compact" href="<?= e(url('/produits')) ?>">Voir toutes les pièces</a>
         </div>
     <?php endif; ?>
 </section>

@@ -5,6 +5,11 @@ declare(strict_types=1);
 /**
  * Product detail page.
  *
+ * The buy bar (quantity + add to cart) is sticky at the bottom of the
+ * viewport while the visitor reads the product sheet. The quantity input
+ * is attached to the main form through the `form` attribute so it can
+ * live inside that bar.
+ *
  * @var array<string, mixed>       $product
  * @var array<int, string>         $gallery
  * @var array<int, array>          $related
@@ -20,16 +25,17 @@ $sizes  = json_decode((string) ($product['sizes'] ?? '[]'), true) ?: [];
 $colors = json_decode((string) ($product['colors'] ?? '[]'), true) ?: [];
 $images = $gallery !== [] ? $gallery : [$product['primary_image'] ?? null];
 
-$mainImage = product_image_url((int) $product['id'], $images[0] ?? null);
-$isWished  = in_array((string) $product['slug'], $wishSlugs ?? [], true);
-$discount  = $isOnSale ? (int) round((1 - ($price / max($oldPrice, 0.01))) * 100) : 0;
+$mainImage   = product_image_url((int) $product['id'], $images[0] ?? null);
+$isWished    = in_array((string) $product['slug'], $wishSlugs ?? [], true);
+$discount    = $isOnSale ? (int) round((1 - ($price / max($oldPrice, 0.01))) * 100) : 0;
+$categoryUrl = !empty($product['category_slug']) ? url('/categorie/' . $product['category_slug']) : null;
 ?>
 <section class="wrap product-page">
     <nav class="breadcrumb" aria-label="Fil d'Ariane">
         <a href="<?= e(url('/')) ?>">Accueil</a>
-        <?php if (!empty($product['category_slug'])): ?>
+        <?php if ($categoryUrl !== null): ?>
             <span aria-hidden="true">›</span>
-            <a href="<?= e(url('/categorie/' . $product['category_slug'])) ?>"><?= e($product['category_name'] ?? 'Catégorie') ?></a>
+            <a href="<?= e($categoryUrl) ?>"><?= e($product['category_name'] ?? 'Catégorie') ?></a>
         <?php endif; ?>
         <span aria-hidden="true">›</span>
         <span aria-current="page"><?= e($product['title']) ?></span>
@@ -68,22 +74,19 @@ $discount  = $isOnSale ? (int) round((1 - ($price / max($oldPrice, 0.01))) * 100
         </div>
 
         <div class="product-details">
-            <?php if (!empty($product['category_name'])): ?>
+            <?php if (!empty($product['category_name']) && $categoryUrl !== null): ?>
                 <p class="product-category">
-                    <a href="<?= e(url('/categorie/' . $product['category_slug'])) ?>"><?= e($product['category_name']) ?></a>
+                    <a href="<?= e($categoryUrl) ?>"><?= e($product['category_name']) ?></a>
                 </p>
             <?php endif; ?>
 
             <h1 class="product-detail-title"><?= e($product['title']) ?></h1>
 
-            <div class="product-rating-row">
-                <?php if ((float) $product['rating'] > 0): ?>
-                    <span class="stars" aria-label="Note : <?= e($product['rating']) ?> sur 5">
-                        <?php for ($i = 1; $i <= 5; $i++): ?>
-                            <?= icon('star', 'icon icon--sm' . ($i <= (int) $product['rating'] ? '' : ' is-empty')) ?>
-                        <?php endfor; ?>
-                    </span>
-                    <span class="rating-value"><?= e(number_format((float) $product['rating'], 1, ',', '')) ?> / 5</span>
+            <div class="product-price-block">
+                <span class="price current"><?= e(format_price($price)) ?></span>
+                <?php if ($isOnSale): ?>
+                    <span class="price old"><?= e(format_price($oldPrice)) ?></span>
+                    <span class="discount-badge">-<?= $discount ?>%</span>
                 <?php endif; ?>
 
                 <span class="stock-status <?= $hasStock ? 'stock-ok' : 'stock-out' ?>">
@@ -92,17 +95,10 @@ $discount  = $isOnSale ? (int) round((1 - ($price / max($oldPrice, 0.01))) * 100
                 </span>
             </div>
 
-            <div class="product-price-block">
-                <span class="price current"><?= e(format_price($price)) ?></span>
-                <?php if ($isOnSale): ?>
-                    <span class="price old"><?= e(format_price($oldPrice)) ?></span>
-                    <span class="discount-badge">-<?= $discount ?>%</span>
-                <?php endif; ?>
-            </div>
-
             <p class="product-description"><?= nl2br(e($product['description'] ?? '')) ?></p>
 
             <form
+                id="cartForm"
                 class="cart-form"
                 action="<?= e(url('/panier/ajouter')) ?>"
                 method="POST"
@@ -162,44 +158,6 @@ $discount  = $isOnSale ? (int) round((1 - ($price / max($oldPrice, 0.01))) * 100
                         </div>
                     </div>
                 <?php endif; ?>
-
-                <div class="product-option">
-                    <span class="option-label">Quantité</span>
-                    <div class="qty-selector">
-                        <button type="button" class="qty-btn qty-btn--minus" aria-label="Diminuer la quantité" disabled>
-                            <?= icon('minus', 'icon icon--sm') ?>
-                        </button>
-                        <input
-                            type="number"
-                            name="quantity"
-                            value="1"
-                            min="1"
-                            max="99"
-                            class="qty-input"
-                            aria-label="Quantité"
-                        >
-                        <button type="button" class="qty-btn qty-btn--plus" aria-label="Augmenter la quantité">
-                            <?= icon('plus', 'icon icon--sm') ?>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="cart-actions">
-                    <button type="submit" class="btn btn--dark btn--block btn--add-cart" <?= $hasStock ? '' : 'disabled' ?>>
-                        <?= icon('cart', 'icon icon--sm') ?>
-                        Ajouter au panier
-                    </button>
-
-                    <a
-                        class="btn btn--ghost btn--block"
-                        href="<?= e(whatsapp_url('Bonjour, je souhaite commander : ' . $product['title'] . ' — ' . format_price($price))) ?>"
-                        target="_blank"
-                        rel="noopener"
-                    >
-                        <?= icon('whatsapp', 'icon icon--sm') ?>
-                        Commander par WhatsApp
-                    </a>
-                </div>
             </form>
 
             <button
@@ -218,6 +176,42 @@ $discount  = $isOnSale ? (int) round((1 - ($price / max($oldPrice, 0.01))) * 100
                 <div class="trust-item"><?= icon('shield', 'icon icon--sm') ?><span>Paiement à la livraison</span></div>
                 <div class="trust-item"><?= icon('refresh', 'icon icon--sm') ?><span>Échange sous 7 jours</span></div>
             </div>
+
+            <a
+                class="btn btn--ghost btn--block product-wa"
+                href="<?= e(whatsapp_url('Bonjour, je souhaite commander : ' . $product['title'] . ' — ' . format_price($price))) ?>"
+                target="_blank"
+                rel="noopener"
+            >
+                <?= icon('whatsapp', 'icon icon--sm') ?>
+                Commander par WhatsApp
+            </a>
+
+            <div class="cart-actions">
+                <div class="qty-selector">
+                    <button type="button" class="qty-btn qty-btn--minus" aria-label="Diminuer la quantité" disabled>
+                        <?= icon('minus', 'icon icon--sm') ?>
+                    </button>
+                    <input
+                        class="qty-input"
+                        type="number"
+                        name="quantity"
+                        form="cartForm"
+                        value="1"
+                        min="1"
+                        max="99"
+                        aria-label="Quantité"
+                    >
+                    <button type="button" class="qty-btn qty-btn--plus" aria-label="Augmenter la quantité">
+                        <?= icon('plus', 'icon icon--sm') ?>
+                    </button>
+                </div>
+
+                <button type="submit" form="cartForm" class="btn btn--dark btn--add-cart" <?= $hasStock ? '' : 'disabled' ?>>
+                    <?= icon('cart', 'icon icon--sm') ?>
+                    Ajouter au panier
+                </button>
+            </div>
         </div>
     </div>
 
@@ -225,16 +219,41 @@ $discount  = $isOnSale ? (int) round((1 - ($price / max($oldPrice, 0.01))) * 100
         <section class="related-section" aria-labelledby="relatedTitle">
             <div class="section-head">
                 <h2 class="section-title" id="relatedTitle">Vous aimerez aussi</h2>
-                <?php if (!empty($product['category_slug'])): ?>
-                    <a class="section-link" href="<?= e(url('/categorie/' . $product['category_slug'])) ?>">Voir la collection</a>
+                <?php if ($categoryUrl !== null): ?>
+                    <a class="section-link" href="<?= e($categoryUrl) ?>">Voir la collection</a>
                 <?php endif; ?>
             </div>
 
-            <div class="product-grid">
+            <ul class="related-list">
                 <?php foreach ($related as $item): ?>
-                    <?php partial('partials/product-card', ['product' => $item, 'wishSlugs' => $wishSlugs ?? []]); ?>
+                    <?php
+                    $relatedPrice = (float) ($item['sale_price'] ?: $item['price']);
+                    $relatedOld   = (float) ($item['price'] ?? 0);
+                    ?>
+                    <li>
+                        <a class="related-item" href="<?= e(url('/produit/' . $item['slug'])) ?>">
+                            <img
+                                class="related-thumb"
+                                src="<?= e(product_image_url((int) ($item['id'] ?? 0), $item['primary_image'] ?? null)) ?>"
+                                alt=""
+                                loading="lazy"
+                                width="46"
+                                height="58"
+                            >
+                            <span class="related-info">
+                                <span class="related-name"><?= e($item['title'] ?? '') ?></span>
+                                <span class="related-price">
+                                    <?= e(format_price($relatedPrice)) ?>
+                                    <?php if ($relatedOld > $relatedPrice): ?>
+                                        <s><?= e(format_price($relatedOld)) ?></s>
+                                    <?php endif; ?>
+                                </span>
+                            </span>
+                            <?= icon('chevron-right', 'icon icon--sm') ?>
+                        </a>
+                    </li>
                 <?php endforeach; ?>
-            </div>
+            </ul>
         </section>
     <?php endif; ?>
 </section>

@@ -65,6 +65,49 @@ final class ProductController
         ]);
     }
 
+    /**
+     * Full catalogue: search, category filter and sorting.
+     */
+    public function catalog(): void
+    {
+        $query = trim((string) ($_GET['q'] ?? ''));
+        $query = mb_substr($query, 0, 60);
+
+        $categorySlug = trim((string) ($_GET['categorie'] ?? ''));
+        $categorySlug = (string) preg_replace('/[^a-z0-9-]/i', '', $categorySlug);
+
+        $sort    = (string) ($_GET['tri'] ?? 'nouveautes');
+        $allowed = ['nouveautes', 'prix-asc', 'prix-desc', 'promos'];
+
+        if (!in_array($sort, $allowed, true)) {
+            $sort = 'nouveautes';
+        }
+
+        $page   = isset($_GET['page']) && ctype_digit((string) $_GET['page']) ? max(1, (int) $_GET['page']) : 1;
+        $result = Product::catalog(
+            $query !== '' ? $query : null,
+            $categorySlug !== '' ? $categorySlug : null,
+            $sort,
+            $page,
+            12
+        );
+
+        View::render('products/index', [
+            'title'          => 'Toutes les pièces — ' . config('app_name'),
+            'description'    => 'Parcourez toutes les pièces Shoop Moda Style : femme, enfant, pyjamas et robes importés de Turquie.',
+            'canonical'      => url('/produits'),
+            'cartCount'      => Cart::count(),
+            'wishCount'      => Wishlist::count(),
+            'wishSlugs'      => Wishlist::all(),
+            'products'       => $result,
+            'categories'     => Category::all(),
+            'query'          => $query,
+            'activeCategory' => $categorySlug,
+            'sort'           => $sort,
+            'page'           => 'catalog',
+        ]);
+    }
+
     public function promotions(): void
     {
         View::render('products/promotions', [

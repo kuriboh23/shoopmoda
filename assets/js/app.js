@@ -252,7 +252,11 @@
         Array.prototype.forEach.call(
             document.querySelectorAll('[data-badge="' + name + '"]'),
             function (badge) {
-                badge.textContent = String(value);
+                // The wishlist badge is a dot: keep it empty, only toggle it.
+                if (!badge.classList.contains('badge--dot')) {
+                    badge.textContent = String(value);
+                }
+
                 badge.hidden = value <= 0;
             }
         );
@@ -474,4 +478,404 @@
             tick();
         }
     }
+})();
+/* ==================================================================
+   Shoop Moda Style — refresh interactions
+   Add to cart without leaving the page, toast, catalogue sorting.
+   ================================================================== */
+(function () {
+    'use strict';
+
+    function postJson(url, data) {
+        return fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(data)
+        }).then(function (response) {
+            return response.json().catch(function () {
+                return {};
+            });
+        });
+    }
+
+    var toast = document.getElementById('smToast');
+    var toastTimer = null;
+
+    function hideToast() {
+        if (toast) {
+            toast.hidden = true;
+        }
+    }
+
+    function showToast(message) {
+        if (!toast) {
+            return;
+        }
+
+        var text = toast.querySelector('[data-toast-text]');
+
+        if (text) {
+            text.textContent = message;
+        }
+
+        toast.hidden = false;
+
+        if (toastTimer) {
+            window.clearTimeout(toastTimer);
+        }
+
+        toastTimer = window.setTimeout(hideToast, 6500);
+    }
+
+    if (toast) {
+        var toastClose = toast.querySelector('[data-toast-close]');
+
+        if (toastClose) {
+            toastClose.addEventListener('click', hideToast);
+        }
+    }
+
+    /* ---------- Add to cart (stay on the page) ------------------- */
+    var cartForm = document.getElementById('cartForm');
+
+    if (cartForm && window.fetch) {
+        cartForm.addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            var button = document.querySelector('.cart-actions .btn--add-cart');
+            var payload = {};
+
+            new FormData(cartForm).forEach(function (value, key) {
+                payload[key] = value;
+            });
+
+            var quantity = document.querySelector('.cart-actions .qty-input');
+
+            if (quantity) {
+                payload.quantity = quantity.value;
+            }
+
+            if (button) {
+                button.disabled = true;
+            }
+
+            postJson(cartForm.action, payload).then(function (data) {
+                if (!data || data.ok !== true) {
+                    showToast((data && data.error) || 'Ajout impossible, réessayez.');
+                    return;
+                }
+
+                if (window.SM && window.SM.setBadge) {
+                    window.SM.setBadge('cart', data.cartCount || 0);
+                }
+
+                showToast(data.message || 'Article ajouté au panier');
+            }).catch(function () {
+                // No JS/AJAX available: fall back to a normal form post.
+                cartForm.submit();
+            }).finally(function () {
+                if (button) {
+                    button.disabled = false;
+                }
+            });
+        });
+    }
+
+    /* ---------- Catalogue: sort on change ----------------------- */
+    Array.prototype.forEach.call(document.querySelectorAll('[data-auto-submit]'), function (field) {
+        field.addEventListener('change', function () {
+            if (field.form) {
+                field.form.submit();
+            }
+        });
+    });
+})();
+
+/* ==================================================================
+   Shoop Moda Style — search suggestions, history, admin helpers
+   ================================================================== */
+(function () {
+    'use strict';
+
+    /* ---------- Search page: live suggestions ------------------- */
+    var form = document.getElementById('siteSearchForm');
+
+    if (form) {
+        var input = document.getElementById('siteSearchInput');
+        var box = document.getElementById('searchSuggestions');
+        var suggestUrl = form.getAttribute('data-suggest-url') || '';
+        var historyWrap = document.getElementById('searchHistory');
+        var historyList = document.querySelector('[data-history-list]');
+        var historyClear = document.querySelector('[data-history-clear]');
+        var timer = null;
+        var controller = null;
+        var lastQuery = '';
+
+        var STORAGE_KEY = 'sm_search_history';
+        var MAX_HISTORY = 8;
+
+        function readHistory() {
+            try {
+                var raw = window.localStorage.getItem(STORAGE_KEY);
+                var list = raw ? JSON.parse(raw) : [];
+
+                if (!Array.isArray(list)) {
+                    return [];
+                }
+
+                return list.filter(function (value) {
+                    return typeof value === 'string' && value !== '';
+                }).slice(0, MAX_HISTORY);
+            } catch (error) {
+                return [];
+            }
+        }
+
+        function writeHistory(list) {
+            try {
+                window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, MAX_HISTORY)));
+            } catch (error) {
+                // Private mode: history simply is not remembered.
+            }
+        }
+
+        function remember(query) {
+            query = query.trim();
+
+            if (query.length < 2) {
+                return;
+            }
+
+            var list = readHistory().filter(function (value) {
+                return value.toLowerCase() !== query.toLowerCase();
+            });
+
+            list.unshift(query);
+            writeHistory(list);
+        }
+
+        function renderHistory() {
+            if (!historyWrap || !historyList) {
+                return;
+            }
+
+            var list = readHistory();
+
+            historyList.textContent = '';
+
+            if (list.length === 0) {
+                historyWrap.hidden = true;
+
+                return;
+            }
+
+            historyWrap.hidden = false;
+
+            list.forEach(function (query) {
+                var chip = document.createElement('button');
+
+                chip.type = 'button';
+                chip.className = 'search-history-chip';
+                chip.textContent = query;
+
+                chip.addEventListener('click', function () {
+                    input.value = query;
+                    remember(query);
+                    form.submit();
+                });
+
+                historyList.appendChild(chip);
+            });
+        }
+
+        function closeSuggestions() {
+            if (!box) {
+                return;
+            }
+
+            box.textContent = '';
+            box.hidden = true;
+            input.setAttribute('aria-expanded', 'false');
+        }
+
+        function renderSuggestions(items) {
+            if (!box) {
+                return;
+            }
+
+            box.textContent = '';
+
+            if (!items.length) {
+                closeSuggestions();
+
+                return;
+            }
+
+            items.forEach(function (item) {
+                var link = document.createElement('a');
+                link.className = 'suggestion';
+                link.href = item.url;
+                link.setAttribute('role', 'option');
+
+                if (item.image) {
+                    var img = document.createElement('img');
+                    img.src = item.image;
+                    img.alt = '';
+                    img.width = 40;
+                    img.height = 50;
+                    img.loading = 'lazy';
+                    link.appendChild(img);
+                }
+
+                var main = document.createElement('span');
+                main.className = 'suggestion-main';
+
+                var title = document.createElement('span');
+                title.className = 'suggestion-title';
+                title.textContent = item.title;
+                main.appendChild(title);
+
+                if (item.category) {
+                    var category = document.createElement('span');
+                    category.className = 'suggestion-cat';
+                    category.textContent = item.category;
+                    main.appendChild(category);
+                }
+
+                link.appendChild(main);
+
+                var price = document.createElement('span');
+                price.className = 'suggestion-price';
+                price.textContent = item.price;
+                link.appendChild(price);
+
+                box.appendChild(link);
+            });
+
+            box.hidden = false;
+            input.setAttribute('aria-expanded', 'true');
+        }
+
+        function loadSuggestions(query) {
+            if (!suggestUrl || query.length < 2) {
+                closeSuggestions();
+
+                return;
+            }
+
+            if (controller) {
+                controller.abort();
+            }
+
+            controller = typeof AbortController === 'function' ? new AbortController() : null;
+
+            var options = {
+                headers: { 'Accept': 'application/json' },
+                credentials: 'same-origin'
+            };
+
+            if (controller) {
+                options.signal = controller.signal;
+            }
+
+            window.fetch(suggestUrl + '?q=' + encodeURIComponent(query), options)
+                .then(function (response) {
+                    return response.json();
+                })
+                .then(function (data) {
+                    if (lastQuery !== query) {
+                        return;
+                    }
+
+                    renderSuggestions((data && data.items) || []);
+                })
+                .catch(function () {
+                    // Aborted or offline: keep the last visible state.
+                });
+        }
+
+        if (input) {
+            input.addEventListener('input', function () {
+                lastQuery = input.value.trim();
+
+                if (timer) {
+                    window.clearTimeout(timer);
+                }
+
+                timer = window.setTimeout(function () {
+                    loadSuggestions(lastQuery);
+                }, 180);
+            });
+
+            input.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') {
+                    closeSuggestions();
+                }
+            });
+        }
+
+        form.addEventListener('submit', function () {
+            if (input) {
+                remember(input.value);
+            }
+        });
+
+        if (historyClear) {
+            historyClear.addEventListener('click', function () {
+                writeHistory([]);
+                renderHistory();
+
+                if (input) {
+                    input.focus();
+                }
+            });
+        }
+
+        document.addEventListener('click', function (event) {
+            if (!box || box.hidden) {
+                return;
+            }
+
+            if (!form.contains(event.target) && !box.contains(event.target)) {
+                closeSuggestions();
+            }
+        });
+
+        renderHistory();
+    }
+
+    /* ---------- Admin: image preview + confirm deletes ---------- */
+    var imageInput = document.querySelector('[data-image-input]');
+    var imagePreview = document.querySelector('[data-image-preview]');
+
+    if (imageInput && imagePreview) {
+        imageInput.addEventListener('change', function () {
+            var file = imageInput.files && imageInput.files[0];
+
+            if (!file || !/^image\//.test(file.type)) {
+                return;
+            }
+
+            var reader = new FileReader();
+
+            reader.addEventListener('load', function () {
+                imagePreview.src = String(reader.result);
+            });
+
+            reader.readAsDataURL(file);
+        });
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll('form[data-confirm]'), function (form) {
+        form.addEventListener('submit', function (event) {
+            if (!window.confirm(form.getAttribute('data-confirm') || 'Confirmer cette action ?')) {
+                event.preventDefault();
+            }
+        });
+    });
 })();

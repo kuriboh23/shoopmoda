@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 $drawerLinks = [
     ['label' => 'Accueil',            'url' => '/',                    'icon' => 'home'],
+    ['label' => 'Toutes les pièces',  'url' => '/produits',            'icon' => 'shirt'],
     ['label' => 'Femme',              'url' => '/categorie/femme',     'icon' => null],
     ['label' => 'Enfants',            'url' => '/categorie/enfants',   'icon' => null],
     ['label' => 'Pyjamas & Ensembles', 'url' => '/categorie/pyjamas',  'icon' => null],

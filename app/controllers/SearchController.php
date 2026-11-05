@@ -31,4 +31,34 @@ final class SearchController
             'page'        => 'search',
         ]);
     }
+
+    /**
+     * JSON autocomplete used by the search page (small title suggestions).
+     */
+    public function suggestions(): void
+    {
+        $query = trim((string) ($_GET['q'] ?? ''));
+        $query = mb_substr($query, 0, 60);
+
+        header('Content-Type: application/json; charset=utf-8');
+        header('Cache-Control: no-store');
+
+        $items = [];
+
+        if (mb_strlen($query) >= 2) {
+            foreach (Product::suggestions($query, 6) as $row) {
+                $items[] = [
+                    'title'    => (string) $row['title'],
+                    'slug'     => (string) $row['slug'],
+                    'url'      => url('/produit/' . $row['slug']),
+                    'price'    => format_price((float) ($row['sale_price'] ?: $row['price'])),
+                    'oldPrice' => !empty($row['sale_price']) ? format_price((float) $row['price']) : null,
+                    'category' => (string) ($row['category_name'] ?? ''),
+                    'image'    => product_image_url((int) $row['id'], $row['primary_image'] ?? null),
+                ];
+            }
+        }
+
+        echo json_encode(['items' => $items], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
 }

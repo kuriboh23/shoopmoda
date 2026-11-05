@@ -63,8 +63,8 @@ $freeShipping = $subtotal >= 500;
                                         type="button"
                                         class="qty-btn"
                                         data-action="update"
-                                        data-qty="<?= max(1, (int) ($item['quantity'] ?? 1) - 1) ?>"
-                                        aria-label="Diminuer la quantité"
+                                        data-qty="<?= max(0, (int) ($item['quantity'] ?? 1) - 1) ?>"
+                                        aria-label="Diminuer la quantité (retire l'article à zéro)"
                                     ><?= icon('minus', 'icon icon--sm') ?></button>
                                     <span class="qty-value"><?= (int) ($item['quantity'] ?? 1) ?></span>
                                     <button
@@ -136,18 +136,15 @@ $freeShipping = $subtotal >= 500;
                 </p>
 
                 <div class="summary-actions">
-                    <a
-                        class="btn btn--wa btn--block"
-                        href="<?= e(whatsapp_url('Bonjour, voici ma commande : ' . implode(', ', array_map(
-                            static fn (array $item): string => $item['name'] . ' x' . (int) ($item['quantity'] ?? 1),
-                            $items
-                        )) . ' — Total ' . format_price($total))) ?>"
-                        target="_blank"
-                        rel="noopener"
-                    >
-                        <?= icon('whatsapp', 'icon icon--sm') ?>
-                        Commander par WhatsApp
+                    <a class="btn btn--dark btn--block" href="<?= e(url('/commande')) ?>">
+                        <?= icon('cart', 'icon icon--sm') ?>
+                        Commander
                     </a>
+
+                    <p class="summary-note summary-note--muted">
+                        <?= icon('shield', 'icon icon--sm') ?>
+                        Nom, ville et adresse demandés avant l’envoi WhatsApp.
+                    </p>
 
                     <a class="btn btn--ghost btn--block" href="<?= e(url('/')) ?>">
                         Continuer mes achats
@@ -156,11 +153,6 @@ $freeShipping = $subtotal >= 500;
 
                 <div class="payment-methods">
                     <span class="payment-label">Paiement à la livraison</span>
-                    <div class="payment-icons">
-                        <span class="payment-icon">💵</span>
-                        <span class="payment-icon">🏦</span>
-                        <span class="payment-icon">💳</span>
-                    </div>
                 </div>
             </aside>
         </div>

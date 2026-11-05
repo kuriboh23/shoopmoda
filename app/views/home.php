@@ -70,11 +70,8 @@ declare(strict_types=1);
                 <div>
                     <p class="eyebrow">Sélection de la semaine</p>
                     <h2 class="section-title" id="featuredTitle">Nos pièces les plus demandées</h2>
-                    <p class="section-subtitle">
-                        Tissus turcs, coupes actuelles et tailles du S au XXL. Ajoutez vos coups de cœur au panier.
-                    </p>
                 </div>
-                <a class="section-link" href="<?= e(url('/categorie/femme')) ?>">Toute la collection</a>
+                <a class="section-link" href="<?= e(url('/produits')) ?>">Tout voir</a>
             </div>
 
             <div class="product-grid">

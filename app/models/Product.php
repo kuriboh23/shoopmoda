@@ -85,6 +85,67 @@ final class Product
     }
 
     /**
+     * Full catalogue listing: search + category + sort, paginated.
+     *
+     * @return array{products: array<int, array<string, mixed>>, total: int, page: int, per_page: int, total_pages: int}
+     */
+    public static function catalog(?string $query, ?string $categorySlug, string $sort, int $page = 1, int $perPage = 12): array
+    {
+        $page   = max(1, $page);
+        $offset = ($page - 1) * $perPage;
+
+        $where  = 'p.is_active = 1';
+        $params = [];
+
+        if ($query !== null && $query !== '') {
+            // Two distinct placeholders: a named parameter cannot be reused
+            // when PDO runs with native prepares.
+            $where .= ' AND (p.title LIKE :queryTitle OR p.description LIKE :queryDescription)';
+            $params['queryTitle']       = '%' . $query . '%';
+            $params['queryDescription'] = '%' . $query . '%';
+        }
+
+        if ($categorySlug !== null && $categorySlug !== '') {
+            $where .= ' AND c.slug = :categorySlug';
+            $params['categorySlug'] = $categorySlug;
+        }
+
+        $orderBy = match ($sort) {
+            'prix-asc'  => 'COALESCE(p.sale_price, p.price) ASC, p.id ASC',
+            'prix-desc' => 'COALESCE(p.sale_price, p.price) DESC, p.id ASC',
+            'promos'    => 'p.is_flash DESC, (p.sale_price IS NOT NULL) DESC, p.created_at DESC',
+            default     => 'p.is_flash DESC, p.is_featured DESC, p.created_at DESC, p.id ASC',
+        };
+
+        $products = Database::select(
+            "SELECT " . self::CARD_COLUMNS . "
+             " . self::CARD_JOINS . "
+             WHERE {$where}
+             ORDER BY {$orderBy}
+             LIMIT :perPage OFFSET :offset",
+            $params + ['perPage' => $perPage, 'offset' => $offset]
+        );
+
+        $countRow = Database::first(
+            "SELECT COUNT(*) AS total
+             FROM products p
+             LEFT JOIN categories c ON c.id = p.category_id
+             WHERE {$where}",
+            $params
+        );
+
+        $count = (int) ($countRow['total'] ?? 0);
+
+        return [
+            'products'    => $products,
+            'total'       => $count,
+            'page'        => $page,
+            'per_page'    => $perPage,
+            'total_pages' => max(1, (int) ceil($count / $perPage)),
+        ];
+    }
+
+    /**
      * @return array<int, array<string, mixed>>
      */
     public static function flashSales(): array
@@ -201,6 +262,231 @@ final class Product
              ORDER BY p.created_at DESC, p.id ASC
              LIMIT :limit",
             ['categorySlug' => $categorySlug, 'productId' => $productId, 'limit' => $limit]
+        );
+    }
+
+    /**
+     * Autocomplete suggestions for the search page.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function suggestions(string $query, int $limit = 6): array
+    {
+        $query = trim($query);
+
+        if ($query === '') {
+            return [];
+        }
+
+        return Database::select(
+            "SELECT p.id, p.title, p.slug, p.price, p.sale_price,
+                    pi.image_path AS primary_image, c.name AS category_name
+             FROM products p
+             LEFT JOIN categories c ON c.id = p.category_id
+             LEFT JOIN product_images pi ON pi.product_id = p.id AND pi.is_primary = 1
+             WHERE p.is_active = 1 AND p.title LIKE :query
+             ORDER BY p.is_featured DESC, p.created_at DESC, p.id ASC
+             LIMIT :limit",
+            ['query' => '%' . $query . '%', 'limit' => $limit]
+        );
+    }
+
+    /**
+     * Turn a title into a URL-safe slug.
+     */
+    public static function slugify(string $value): string
+    {
+        $value = mb_strtolower(trim($value));
+        $value = strtr($value, [
+            'à' => 'a', 'á' => 'a', 'â' => 'a', 'ä' => 'a', 'ã' => 'a', 'å' => 'a',
+            'ç' => 'c',
+            'è' => 'e', 'é' => 'e', 'ê' => 'e', 'ë' => 'e',
+            'ì' => 'i', 'í' => 'i', 'î' => 'i', 'ï' => 'i',
+            'ñ' => 'n',
+            'ò' => 'o', 'ó' => 'o', 'ô' => 'o', 'ö' => 'o', 'õ' => 'o',
+            'ù' => 'u', 'ú' => 'u', 'û' => 'u', 'ü' => 'u',
+            'ý' => 'y', 'ÿ' => 'y', 'œ' => 'oe', 'æ' => 'ae', 'ß' => 'ss',
+        ]);
+        $value = preg_replace('/[^a-z0-9]+/', '-', $value) ?? '';
+        $value = trim($value, '-');
+
+        return $value !== '' ? mb_substr($value, 0, 120) : 'piece';
+    }
+
+    /**
+     * Products for the admin list (inactive ones included).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function adminAll(string $search = '', int $limit = 100): array
+    {
+        $sql = "SELECT p.id, p.title, p.slug, p.price, p.sale_price, p.stock,
+                       p.is_active, p.is_featured, p.is_flash, p.created_at,
+                       c.name AS category_name, pi.image_path AS primary_image
+                FROM products p
+                LEFT JOIN categories c ON c.id = p.category_id
+                LEFT JOIN product_images pi ON pi.product_id = p.id AND pi.is_primary = 1";
+
+        $params = [];
+
+        if ($search !== '') {
+            $sql .= ' WHERE p.title LIKE :titleSearch OR p.slug LIKE :slugSearch';
+            $params['titleSearch'] = '%' . $search . '%';
+            $params['slugSearch']  = '%' . $search . '%';
+        }
+
+        $sql .= ' ORDER BY p.created_at DESC, p.id DESC LIMIT :limit';
+        $params['limit'] = $limit;
+
+        return Database::select($sql, $params);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public static function adminFind(int $id): ?array
+    {
+        return Database::first(
+            "SELECT p.*, c.name AS category_name, pi.image_path AS primary_image
+             FROM products p
+             LEFT JOIN categories c ON c.id = p.category_id
+             LEFT JOIN product_images pi ON pi.product_id = p.id AND pi.is_primary = 1
+             WHERE p.id = :id
+             LIMIT 1",
+            ['id' => $id]
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public static function adminStats(): array
+    {
+        $row = Database::first(
+            "SELECT COUNT(*) AS products,
+                    COALESCE(SUM(is_active = 1), 0) AS active,
+                    COALESCE(SUM(is_active = 1 AND stock <= 0), 0) AS out_of_stock,
+                    COALESCE(SUM(is_active = 1 AND is_flash = 1), 0) AS flash,
+                    COALESCE(SUM(is_active = 1 AND sale_price IS NOT NULL), 0) AS on_sale,
+                    COALESCE(SUM(stock * COALESCE(sale_price, price)), 0) AS stock_value
+             FROM products"
+        );
+
+        return $row ?? [
+            'products' => 0, 'active' => 0, 'out_of_stock' => 0,
+            'flash' => 0, 'on_sale' => 0, 'stock_value' => 0,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    public static function create(array $data): int
+    {
+        Database::execute(
+            'INSERT INTO products
+                (category_id, title, slug, description, price, sale_price, stock, sizes, colors, is_flash, is_featured, is_active)
+             VALUES
+                (:category_id, :title, :slug, :description, :price, :sale_price, :stock, :sizes, :colors, :is_flash, :is_featured, :is_active)',
+            [
+                'category_id' => $data['category_id'] ?: null,
+                'title'       => $data['title'],
+                'slug'        => $data['slug'],
+                'description' => $data['description'],
+                'price'       => $data['price'],
+                'sale_price'  => $data['sale_price'] !== null ? $data['sale_price'] : null,
+                'stock'       => $data['stock'],
+                'sizes'       => $data['sizes'],
+                'colors'      => $data['colors'],
+                'is_flash'    => $data['is_flash'],
+                'is_featured' => $data['is_featured'],
+                'is_active'   => $data['is_active'],
+            ]
+        );
+
+        return (int) Database::pdo()->lastInsertId();
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    public static function update(int $id, array $data): void
+    {
+        Database::execute(
+            'UPDATE products SET
+                category_id = :category_id, title = :title, slug = :slug,
+                description = :description, price = :price, sale_price = :sale_price,
+                stock = :stock, sizes = :sizes, colors = :colors,
+                is_flash = :is_flash, is_featured = :is_featured, is_active = :is_active
+             WHERE id = :id',
+            [
+                'id'          => $id,
+                'category_id' => $data['category_id'] ?: null,
+                'title'       => $data['title'],
+                'slug'        => $data['slug'],
+                'description' => $data['description'],
+                'price'       => $data['price'],
+                'sale_price'  => $data['sale_price'] !== null ? $data['sale_price'] : null,
+                'stock'       => $data['stock'],
+                'sizes'       => $data['sizes'],
+                'colors'      => $data['colors'],
+                'is_flash'    => $data['is_flash'],
+                'is_featured' => $data['is_featured'],
+                'is_active'   => $data['is_active'],
+            ]
+        );
+    }
+
+    public static function delete(int $id): void
+    {
+        $images = Database::select(
+            'SELECT image_path FROM product_images WHERE product_id = :id',
+            ['id' => $id]
+        );
+
+        Database::execute('DELETE FROM products WHERE id = :id', ['id' => $id]);
+
+        foreach ($images as $image) {
+            $path = (string) ($image['image_path'] ?? '');
+
+            if (!str_starts_with($path, 'uploads/products/')) {
+                continue;
+            }
+
+            $file = PUBLIC_PATH . '/' . $path;
+
+            if (is_file($file)) {
+                @unlink($file);
+            }
+        }
+    }
+
+    public static function slugExists(string $slug, ?int $exceptId = null): bool
+    {
+        $sql    = 'SELECT COUNT(*) AS total FROM products WHERE slug = :slug';
+        $params = ['slug' => $slug];
+
+        if ($exceptId !== null) {
+            $sql .= ' AND id != :id';
+            $params['id'] = $exceptId;
+        }
+
+        $row = Database::first($sql, $params);
+
+        return (int) ($row['total'] ?? 0) > 0;
+    }
+
+    public static function setPrimaryImage(int $productId, string $path): void
+    {
+        Database::execute(
+            'UPDATE product_images SET is_primary = 0 WHERE product_id = :id',
+            ['id' => $productId]
+        );
+
+        Database::execute(
+            'INSERT INTO product_images (product_id, image_path, sort_order, is_primary)
+             VALUES (:product_id, :image_path, 0, 1)',
+            ['product_id' => $productId, 'image_path' => $path]
         );
     }
 

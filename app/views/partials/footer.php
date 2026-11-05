@@ -38,6 +38,7 @@ declare(strict_types=1);
         <div class="footer-col">
             <h2 class="footer-title">Catégories</h2>
             <ul class="footer-links">
+                <li><a href="<?= e(url('/produits')) ?>">Toutes les pièces</a></li>
                 <li><a href="<?= e(url('/categorie/femme')) ?>">Collection femme</a></li>
                 <li><a href="<?= e(url('/categorie/enfants')) ?>">Mode enfant</a></li>
                 <li><a href="<?= e(url('/categorie/pyjamas')) ?>">Pyjamas &amp; ensembles</a></li>

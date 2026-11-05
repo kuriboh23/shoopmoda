@@ -12,18 +12,30 @@ declare(strict_types=1);
 
 $announcement = (array) config('announcement');
 $announcementMessages = (array) ($announcement['messages'] ?? []);
+
 if ($announcementMessages === []) {
     $announcementMessages = array_filter([$announcement['highlight'] ?? '', $announcement['text'] ?? '']);
 }
+
+// The owner can replace the first message from the admin settings.
+$announcementOverride = trim((string) setting('announcement_text', ''));
+
+if ($announcementOverride !== '') {
+    array_unshift($announcementMessages, $announcementOverride);
+}
 $navItems = [
-    ['label' => 'Accueil',   'url' => '/'],
-    ['label' => 'Femme',     'url' => '/categorie/femme'],
-    ['label' => 'Enfants',   'url' => '/categorie/enfants'],
-    ['label' => 'Pyjamas',   'url' => '/categorie/pyjamas'],
+    ['label' => 'Boutique',   'url' => '/produits'],
+    ['label' => 'Femme',      'url' => '/categorie/femme'],
+    ['label' => 'Enfants',    'url' => '/categorie/enfants'],
+    ['label' => 'Pyjamas',    'url' => '/categorie/pyjamas'],
     ['label' => 'Promotions', 'url' => '/promotions'],
 ];
 ?>
 <aside class="announcement-bar" aria-label="Informations boutique">
+    <span class="announcement-badge" aria-hidden="true">
+        <?= icon('truck', 'icon') ?>
+    </span>
+
     <div class="announcement-marquee">
         <?php for ($pass = 0; $pass < 2; $pass++): ?>
             <div class="announcement-track"<?= $pass === 1 ? ' aria-hidden="true"' : '' ?>>
@@ -75,11 +87,9 @@ $navItems = [
     </nav>
 
     <div class="header-actions">
-        
-
         <a class="icon-btn" href="<?= e(url('/favoris')) ?>" aria-label="Ma liste de favoris">
             <?= icon('heart', 'icon') ?>
-            <span class="badge" data-badge="wishlist"<?= $wishCount > 0 ? '' : ' hidden' ?>><?= (int) $wishCount ?></span>
+            <span class="badge badge--dot" data-badge="wishlist"<?= $wishCount > 0 ? '' : ' hidden' ?>></span>
         </a>
 
         <a class="icon-btn" href="<?= e(url('/panier')) ?>" aria-label="Mon panier">

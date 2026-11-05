@@ -69,6 +69,20 @@ final class Setting
     }
 
     /**
+     * Create or update a setting (admin panel).
+     */
+    public static function put(string $key, string $value): void
+    {
+        Database::execute(
+            'INSERT INTO settings (setting_key, setting_value) VALUES (:setting_key, :setting_value)
+             ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)',
+            ['setting_key' => $key, 'setting_value' => $value]
+        );
+
+        self::$cache[$key] = $value;
+    }
+
+    /**
      * @param string $key
      * @param float  $default
      */
