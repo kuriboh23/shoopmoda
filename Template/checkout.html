@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Shoop Moda Style | Checkout</title>
+    <style>
+        /* Design System Variables */
+        :root {
+            --primary: #704F38;
+            --dark: #1F2029;
+            --gray: #797979;
+            --light: #EDEDED;
+            --white: #FFFFFF;
+            --whatsapp: #25D366;
+            --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.05);
+            --shadow-sticky: 0 -4px 16px rgba(0, 0, 0, 0.06);
+            --transition: all 0.25s ease;
+        }
+
+        /* Reset & Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--dark);
+            padding-bottom: 100px;
+            overflow-x: hidden;
+        }
+
+        /* Responsive Container */
+        .app-container {
+            max-width: 480px;
+            margin: 0 auto;
+            background: var(--white);
+            min-height: 100vh;
+            position: relative;
+            box-shadow: var(--shadow-soft);
+        }
+
+        @media (min-width: 768px) {
+            body { 
+                background-color: #f5f5f5; 
+                padding-bottom: 0;
+            }
+            .app-container {
+                max-width: 900px;
+                margin: 24px auto;
+                border-radius: 20px;
+                overflow: hidden;
+                min-height: calc(100vh - 48px);
+                padding-bottom: 24px;
+            }
+            .checkout-layout-desktop {
+                display: grid;
+                grid-template-columns: 1fr 380px;
+                gap: 24px;
+                padding: 0 20px;
+            }
+        }
+
+        /* Header Navigation */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            background: var(--white);
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--dark);
+            flex: 1;
+            text-align: center;
+            margin-right: 42px;
+        }
+
+        .icon-btn {
+            background: var(--white);
+            border: 1px solid var(--light);
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: var(--transition);
+        }
+
+        .icon-btn:hover { background: var(--light); }
+        .icon-btn svg { width: 20px; height: 20px; fill: var(--dark); }
+
+        /* Form & Section Styles */
+        .checkout-section {
+            padding: 0 20px 20px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 14px;
+        }
+
+        /* Shipping Address Inputs */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .input-field {
+            width: 100%;
+            background: var(--white);
+            border: 1px solid var(--light);
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-size: 14px;
+            color: var(--dark);
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .input-field:focus {
+            border-color: var(--primary);
+        }
+
+        .input-field::placeholder {
+            color: var(--gray);
+        }
+
+        .form-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Shipping Options Selectors */
+        .shipping-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .shipping-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            border: 1.5px solid var(--light);
+            border-radius: 14px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .shipping-card.active {
+            border-color: var(--dark);
+            background: rgba(31, 32, 41, 0.02);
+        }
+
+        .shipping-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .radio-circle {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid var(--light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .shipping-card.active .radio-circle {
+            border-color: var(--dark);
+        }
+
+        .shipping-card.active .radio-circle::after {
+            content: '';
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--dark);
+        }
+
+        .shipping-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .shipping-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .shipping-eta {
+            font-size: 12px;
+            color: var(--gray);
+        }
+
+        .shipping-price {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        /* Order Items Summary Strip */
+        .order-summary-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .summary-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .summary-img-placeholder {
+            width: 56px;
+            height: 56px;
+            border-radius: 10px;
+            background: #D9D9D9;
+            flex-shrink: 0;
+        }
+
+        .summary-item-details {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .summary-item-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--dark);
+        }
+
+        .summary-item-meta {
+            font-size: 12px;
+            color: var(--gray);
+        }
+
+        .summary-item-price {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        /* Order Calculation Side / Bottom Box */
+        .checkout-summary-box {
+            background: var(--white);
+            border: 1px solid var(--light);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: var(--shadow-soft);
+        }
+
+        .price-breakdown {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            color: var(--gray);
+        }
+
+        .price-row.total-row {
+            border-top: 1px dashed var(--light);
+            padding-top: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .price-row.total-row .row-val {
+            font-size: 18px;
+        }
+
+        /* Sticky Action Bar for Mobile */
+        .action-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--white);
+            padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
+            box-shadow: var(--shadow-sticky);
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            z-index: 100;
+        }
+
+        @media (min-width: 768px) {
+            .action-bar {
+                position: relative;
+                box-shadow: none;
+                padding: 0;
+                margin-top: 20px;
+            }
+        }
+
+        .whatsapp-submit-btn {
+            width: 100%;
+            background: var(--whatsapp);
+            color: var(--white);
+            border: none;
+            padding: 16px;
+            border-radius: 30px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-decoration: none;
+            transition: var(--transition);
+            box-shadow: 0 4px 14px rgba(37, 211, 102, 0.3);
+        }
+
+        .whatsapp-submit-btn:hover {
+            background: #20bd5a;
+        }
+
+        .whatsapp-submit-btn:active {
+            transform: scale(0.98);
+        }
+
+        .whatsapp-submit-btn svg {
+            width: 22px;
+            height: 22px;
+            fill: var(--white);
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <!-- Header Navigation -->
+    <header>
+        <button class="icon-btn" aria-label="Go Back" onclick="history.back()">
+            <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        </button>
+        <h1 class="header-title">Checkout</h1>
+    </header>
+
+    <div class="checkout-layout-desktop">
+        <!-- Main Form Content -->
+        <div class="checkout-section">
+            <!-- Shipping Information Form -->
+            <div class="section-title">Shipping Address</div>
+            <form id="checkoutForm" onsubmit="event.preventDefault(); sendWhatsAppOrder();">
+                <div class="form-group">
+                    <input type="text" class="input-field" id="fullName" placeholder="Full Name" required value="Fatima Zahra">
+                    <input type="tel" class="input-field" id="phoneNumber" placeholder="Phone Number (e.g., 0612345678)" required value="0612345678">
+                    <div class="form-row">
+                        <input type="text" class="input-field" id="cityName" placeholder="City" required value="Casablanca">
+                        <input type="text" class="input-field" id="postalCode" placeholder="Postal Code (Optional)">
+                    </div>
+                    <input type="text" class="input-field" id="fullAddress" placeholder="Full Delivery Address" required value="Boulevard Anfa, Res. Atlas Apt 4">
+                </div>
+
+                <!-- Delivery Method Selector -->
+                <div class="section-title">Shipping Method</div>
+                <div class="shipping-options">
+                    <div class="shipping-card active" onclick="selectShipping(this, 25.00, 'Economy Delivery')">
+                        <div class="shipping-info">
+                            <div class="radio-circle"></div>
+                            <div class="shipping-details">
+                                <span class="shipping-name">Economy Shipping</span>
+                                <span class="shipping-eta">Estimated 3-5 Business Days</span>
+                            </div>
+                        </div>
+                        <span class="shipping-price">$25.00</span>
+                    </div>
+
+                    <div class="shipping-card" onclick="selectShipping(this, 45.00, 'Express Delivery')">
+                        <div class="shipping-info">
+                            <div class="radio-circle"></div>
+                            <div class="shipping-details">
+                                <span class="shipping-name">Express Delivery</span>
+                                <span class="shipping-eta">Estimated 24-48 Hours</span>
+                            </div>
+                        </div>
+                        <span class="shipping-price">$45.00</span>
+                    </div>
+                </div>
+
+                <!-- Selected Order Items Overview -->
+                <div class="section-title">Order Items (2)</div>
+                <div class="order-summary-list">
+                    <div class="summary-item">
+                        <div class="summary-img-placeholder"></div>
+                        <div class="summary-item-details">
+                            <span class="summary-item-name">Brown Jacket</span>
+                            <span class="summary-item-meta">Size: XL | Qty: 1</span>
+                        </div>
+                        <span class="summary-item-price">$83.97</span>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-img-placeholder"></div>
+                        <div class="summary-item-details">
+                            <span class="summary-item-name">Brown Suite</span>
+                            <span class="summary-item-meta">Size: XL | Qty: 1</span>
+                        </div>
+                        <span class="summary-item-price">$120.00</span>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Order Totals Box -->
+        <div class="checkout-section">
+            <div class="checkout-summary-box">
+                <div class="section-title">Order Summary</div>
+                <div class="price-breakdown">
+                    <div class="price-row">
+                        <span>Sub-Total</span>
+                        <span class="row-val" id="subTotalDisplay">$203.97</span>
+                    </div>
+                    <div class="price-row">
+                        <span>Delivery Fee</span>
+                        <span class="row-val" id="deliveryDisplay">$25.00</span>
+                    </div>
+                    <div class="price-row">
+                        <span>Discount</span>
+                        <span class="row-val" id="discountDisplay">-$0.00</span>
+                    </div>
+                    <div class="price-row total-row">
+                        <span>Total Cost</span>
+                        <span class="row-val" id="totalDisplay">$228.97</span>
+                    </div>
+                </div>
+
+                <!-- Action Button inside desktop grid -->
+                <div class="action-bar">
+                    <button type="button" class="whatsapp-submit-btn" onclick="sendWhatsAppOrder()">
+                        <svg viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+                        Complete Order on WhatsApp
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentShippingCost = 25.00;
+    let currentShippingName = 'Economy Delivery';
+    const subTotal = 203.97;
+    const whatsappNumber = '212725605520';
+
+    function selectShipping(element, price, name) {
+        document.querySelectorAll('.shipping-card').forEach(card => card.classList.remove('active'));
+        element.classList.add('active');
+        currentShippingCost = price;
+        currentShippingName = name;
+        
+        // Update price display
+        document.getElementById('deliveryDisplay').textContent = `$${price.toFixed(2)}`;
+        const grandTotal = subTotal + currentShippingCost;
+        document.getElementById('totalDisplay').textContent = `$${grandTotal.toFixed(2)}`;
+    }
+
+    function sendWhatsAppOrder() {
+        const name = document.getElementById('fullName').value.trim();
+        const phone = document.getElementById('phoneNumber').value.trim();
+        const city = document.getElementById('cityName').value.trim();
+        const address = document.getElementById('fullAddress').value.trim();
+
+        if (!name || !phone || !city || !address) {
+            alert('Please fill in all required shipping fields.');
+            return;
+        }
+
+        const grandTotal = (subTotal + currentShippingCost).toFixed(2);
+
+        // Format clean WhatsApp message
+        let message = `🛍️ *NEW ORDER - SHOOP MODA STYLE*\n`;
+        message += `-----------------------------------\n`;
+        message += `👤 *Customer:* ${name}\n`;
+        message += `📞 *Phone:* ${phone}\n`;
+        message += `📍 *Address:* ${address}, ${city}\n`;
+        message += `🚚 *Shipping:* ${currentShippingName}\n`;
+        message += `-----------------------------------\n`;
+        message += `📦 *ITEMS:* \n`;
+        message += `• Brown Jacket (Size: XL, Qty: 1) - $83.97\n`;
+        message += `• Brown Suite (Size: XL, Qty: 1) - $120.00\n`;
+        message += `-----------------------------------\n`;
+        message += `💵 *Sub-Total:* $${subTotal.toFixed(2)}\n`;
+        message += `🚚 *Delivery Fee:* $${currentShippingCost.toFixed(2)}\n`;
+        message += `💰 *TOTAL COST:* $${grandTotal}\n`;
+        message += `-----------------------------------\n`;
+        message += `Please confirm my order! Thank you! ✨`;
+
+        const encodedMessage = encodeURIComponent(message);
+        const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
+        
+        window.open(whatsappUrl, '_blank');
+    }
+</script>
+
+</body>
+</html>

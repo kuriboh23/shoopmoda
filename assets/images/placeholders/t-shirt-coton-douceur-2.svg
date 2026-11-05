@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-label="Visuel de démonstration — Douceur">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F8F5F1"/>
+      <stop offset="1" stop-color="#E7E2DB"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="1000" fill="url(#bg)"/>
+  <circle cx="140" cy="210" r="170" fill="#C2A691" opacity="0.22"/><circle cx="690" cy="820" r="210" fill="#704F38" opacity="0.08"/>
+  <rect x="56" y="56" width="688" height="888" rx="10" fill="none" stroke="#704F38" stroke-opacity="0.14"/><line x1="400" y1="120" x2="400" y2="300" stroke="#704F38" stroke-opacity="0.18" stroke-width="1"/>
+  <text x="400" y="470" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif"
+        font-size="170" font-weight="700" fill="#704F38">D</text>
+  <text x="400" y="600" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+        font-size="24" letter-spacing="9" fill="#797979">DOUCEUR</text>
+  <line x1="330" y1="600" x2="470" y2="600" stroke="#704F38" stroke-opacity="0.25" transform="translate(0 34)"/>
+  <text x="400" y="905" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+        font-size="14" letter-spacing="6" fill="#797979" opacity="0.8">SHOOP MODA STYLE</text>
+</svg>

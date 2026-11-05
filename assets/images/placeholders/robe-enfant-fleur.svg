@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-label="Visuel de démonstration — Fleur">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F8F5F1"/>
+      <stop offset="1" stop-color="#E7E2DB"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="1000" fill="url(#bg)"/>
+  <circle cx="650" cy="170" r="190" fill="#704F38" opacity="0.09"/><circle cx="110" cy="890" r="150" fill="#C2A691" opacity="0.20"/><circle cx="400" cy="380" r="230" fill="#FFFFFF" opacity="0.55"/>
+  <rect x="56" y="56" width="688" height="888" rx="10" fill="none" stroke="#704F38" stroke-opacity="0.14"/>
+  <text x="400" y="470" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif"
+        font-size="170" font-weight="700" fill="#704F38">F</text>
+  <text x="400" y="560" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+        font-size="24" letter-spacing="9" fill="#797979">FLEUR</text>
+  <line x1="330" y1="560" x2="470" y2="560" stroke="#704F38" stroke-opacity="0.25" transform="translate(0 34)"/>
+  <text x="400" y="905" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+        font-size="14" letter-spacing="6" fill="#797979" opacity="0.8">SHOOP MODA STYLE</text>
+</svg>
