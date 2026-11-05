@@ -25,13 +25,23 @@ final class View
     }
 
     /**
-     * Render a partial without a layout.
+     * Render a partial without a layout (echoed into the current buffer).
      *
      * @param array<string, mixed> $data
      */
     public static function partial(string $partial, array $data = []): void
     {
         echo self::capture($partial, self::resolveData($data));
+    }
+
+    /**
+     * Return a rendered partial as a string.
+     *
+     * @param array<string, mixed> $data
+     */
+    public static function partialHtml(string $partial, array $data = []): string
+    {
+        return self::capture($partial, self::resolveData($data));
     }
 
     /**

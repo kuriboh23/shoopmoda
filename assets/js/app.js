@@ -261,3 +261,217 @@
     window.SM = window.SM || {};
     window.SM.setBadge = setBadge;
 })();
+/* ==================================================================
+   Shoop Moda Style — storefront interactions
+   Product cards, wishlist, gallery, options, cart, countdown.
+   ================================================================== */
+(function () {
+    'use strict';
+
+    function postJson(url, data) {
+        return fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(data)
+        }).then(function (response) {
+            return response.json().catch(function () {
+                return {};
+            });
+        });
+    }
+
+    /* ---------- Wishlist toggle (cards + product page) ---------- */
+    Array.prototype.forEach.call(document.querySelectorAll('[data-wish-slug]'), function (button) {
+        button.addEventListener('click', function () {
+            var slug = button.getAttribute('data-wish-slug');
+            var url = button.getAttribute('data-wishlist-url');
+
+            if (!slug || !url) {
+                return;
+            }
+
+            button.disabled = true;
+
+            postJson(url, { slug: slug }).then(function (data) {
+                if (!data || data.ok !== true) {
+                    return;
+                }
+
+                button.classList.toggle('is-active', !!data.active);
+                button.setAttribute('aria-pressed', data.active ? 'true' : 'false');
+
+                var label = button.querySelector('span');
+                if (label) {
+                    label.textContent = data.active ? 'Dans mes favoris' : 'Ajouter aux favoris';
+                }
+
+                button.setAttribute(
+                    'aria-label',
+                    data.active ? 'Retirer des favoris' : 'Ajouter aux favoris'
+                );
+
+                if (window.SM && window.SM.setBadge) {
+                    window.SM.setBadge('wishlist', data.wishCount || 0);
+                }
+            }).finally(function () {
+                button.disabled = false;
+            });
+        });
+    });
+
+    /* ---------- Product gallery thumbnails ---------------------- */
+    var mainImage = document.getElementById('galleryMainImage');
+    var thumbs = document.querySelectorAll('.gallery-thumb');
+
+    if (mainImage && thumbs.length > 0) {
+        Array.prototype.forEach.call(thumbs, function (thumb) {
+            thumb.addEventListener('click', function () {
+                var source = thumb.getAttribute('data-img');
+
+                if (!source) {
+                    return;
+                }
+
+                mainImage.src = source;
+
+                Array.prototype.forEach.call(thumbs, function (item) {
+                    item.classList.toggle('is-active', item === thumb);
+                });
+            });
+        });
+    }
+
+    /* ---------- Size / colour selection ------------------------- */
+    function bindOptions(buttons, hiddenId, attribute) {
+        Array.prototype.forEach.call(buttons, function (button) {
+            button.addEventListener('click', function () {
+                Array.prototype.forEach.call(buttons, function (item) {
+                    item.setAttribute('aria-checked', item === button ? 'true' : 'false');
+                });
+
+                var hidden = document.getElementById(hiddenId);
+                if (hidden) {
+                    hidden.value = button.getAttribute(attribute) || '';
+                }
+            });
+        });
+    }
+
+    bindOptions(document.querySelectorAll('.size-btn'), 'selectedSize', 'data-size');
+    bindOptions(document.querySelectorAll('.color-btn'), 'selectedColor', 'data-color');
+
+    /* ---------- Quantity steppers ------------------------------- */
+    Array.prototype.forEach.call(document.querySelectorAll('.qty-selector'), function (selector) {
+        var input = selector.querySelector('.qty-input');
+
+        if (!input) {
+            return;
+        }
+
+        var minus = selector.querySelector('.qty-btn--minus');
+        var plus = selector.querySelector('.qty-btn--plus');
+
+        function apply(delta) {
+            var value = parseInt(input.value, 10) || 1;
+            value = Math.min(99, Math.max(1, value + delta));
+            input.value = String(value);
+
+            if (minus) {
+                minus.disabled = value <= 1;
+            }
+        }
+
+        if (minus) {
+            minus.addEventListener('click', function () {
+                apply(-1);
+            });
+        }
+
+        if (plus) {
+            plus.addEventListener('click', function () {
+                apply(1);
+            });
+        }
+
+        input.addEventListener('change', function () {
+            var value = parseInt(input.value, 10) || 1;
+            input.value = String(Math.min(99, Math.max(1, value)));
+        });
+    });
+
+    /* ---------- Cart actions ------------------------------------ */
+    var cartPage = document.querySelector('.cart-page');
+
+    if (cartPage && cartPage.getAttribute('data-cart-update')) {
+        cartPage.addEventListener('click', function (event) {
+            var trigger = event.target.closest ? event.target.closest('[data-action]') : null;
+
+            if (!trigger || !cartPage.contains(trigger)) {
+                return;
+            }
+
+            var action = trigger.getAttribute('data-action');
+            var item = trigger.closest('.cart-item');
+            var slug = item ? item.getAttribute('data-slug') : '';
+            var request = null;
+
+            if (action === 'update' && slug) {
+                request = postJson(cartPage.getAttribute('data-cart-update'), {
+                    slug: slug,
+                    quantity: parseInt(trigger.getAttribute('data-qty'), 10) || 1
+                });
+            } else if (action === 'remove' && slug) {
+                request = postJson(cartPage.getAttribute('data-cart-remove'), { slug: slug });
+            } else if (action === 'empty') {
+                request = postJson(cartPage.getAttribute('data-cart-empty'), {});
+            }
+
+            if (!request) {
+                return;
+            }
+
+            trigger.disabled = true;
+
+            request.then(function (data) {
+                if (data && data.ok) {
+                    window.location.reload();
+                }
+            }).finally(function () {
+                trigger.disabled = false;
+            });
+        });
+    }
+
+    /* ---------- Flash sale countdown ---------------------------- */
+    var timer = document.getElementById('countdownTimer');
+
+    if (timer) {
+        var end = Date.parse(String(timer.getAttribute('data-end') || '').replace(' ', 'T'));
+
+        function pad(value) {
+            return value < 10 ? '0' + value : String(value);
+        }
+
+        function tick() {
+            var remaining = Math.max(0, Math.floor((end - Date.now()) / 1000));
+            var hours = Math.floor(remaining / 3600);
+            var minutes = Math.floor((remaining % 3600) / 60);
+            var seconds = remaining % 60;
+
+            timer.textContent = pad(hours) + ' : ' + pad(minutes) + ' : ' + pad(seconds);
+
+            if (remaining > 0) {
+                window.setTimeout(tick, 1000);
+            }
+        }
+
+        if (!isNaN(end)) {
+            tick();
+        }
+    }
+})();

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\View;
+use App\Models\Cart;
+use App\Models\Wishlist;
 
 final class ErrorController
 {
@@ -16,8 +18,8 @@ final class ErrorController
             'title'       => 'Page introuvable',
             'description' => 'La page demandée n’existe pas ou a été déplacée.',
             'canonical'   => url(current_path()),
-            'cartCount'   => 0,
-            'wishCount'   => 0,
+            'cartCount'   => Cart::count(),
+            'wishCount'   => Wishlist::count(),
             'noindex'     => true,
         ], 'layouts/main');
     }

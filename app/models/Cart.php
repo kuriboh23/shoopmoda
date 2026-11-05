@@ -13,7 +13,7 @@ final class Cart
 
     public static function add(string $slug, array $item): void
     {
-        self::ensure();
+        self::all();
 
         if (isset(self::$memory[$slug])) {
             self::$memory[$slug]['quantity'] = min(
@@ -37,7 +37,7 @@ final class Cart
 
     public static function remove(string $slug): void
     {
-        self::ensure();
+        self::all();
 
         unset(self::$memory[$slug]);
         Session::set('cart', self::$memory);
@@ -45,7 +45,7 @@ final class Cart
 
     public static function update(string $slug, int $quantity): void
     {
-        self::ensure();
+        self::all();
 
         if (!array_key_exists($slug, self::$memory)) {
             return;

@@ -7,21 +7,22 @@ namespace App\Models;
 use App\Core\Database;
 
 /**
- * Category catalogue queries.
+ * Category queries, aligned on database/schema.sql.
  */
 final class Category
 {
     /**
      * @return array<int, array<string, mixed>>
      */
-    public static function list(bool $isMenu = false): array
+    public static function all(bool $isMenu = false): array
     {
         $rows = Database::select(
-            "SELECT c.id, c.name, c.slug, c.icon, COALESCE(c.menu_label, c.name) AS menu_label,
-                    c.sort_order, c.is_active, c.created_at,
+            "SELECT c.id, c.name, c.slug, c.icon, c.sort_order, c.is_active, c.created_at,
+                    c.name AS menu_label,
                     (SELECT COUNT(*) FROM products p
-                     WHERE p.is_active = 1 AND p.category_slug = c.slug) AS product_count
+                     WHERE p.is_active = 1 AND p.category_id = c.id) AS product_count
              FROM categories c
+             WHERE c.is_active = 1
              ORDER BY c.sort_order ASC, c.name ASC"
         );
 
@@ -35,19 +36,35 @@ final class Category
     }
 
     /**
+     * @return array<int, array<string, mixed>>
+     */
+    public static function list(bool $isMenu = false): array
+    {
+        return self::all($isMenu);
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
     public static function findBySlug(string $slug): ?array
     {
-        $row = Database::selectOne(
-            "SELECT id, name, slug, icon, menu_label,
-                    COALESCE(menu_label, name) AS display_label,
-                    sort_order, is_active, created_at
-             FROM categories
-             WHERE slug = :slug AND is_active = 1",
+        return Database::first(
+            "SELECT c.id, c.name, c.slug, c.icon, c.sort_order, c.is_active,
+                    c.name AS menu_label,
+                    (SELECT COUNT(*) FROM products p
+                     WHERE p.is_active = 1 AND p.category_id = c.id) AS product_count
+             FROM categories c
+             WHERE c.slug = :slug AND c.is_active = 1
+             LIMIT 1",
             ['slug' => $slug]
         );
+    }
 
-        return $row !== false ? $row : null;
+    /**
+     * @return array<string, mixed>|null
+     */
+    public static function bySlug(string $slug): ?array
+    {
+        return self::findBySlug($slug);
     }
 }

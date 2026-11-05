@@ -133,17 +133,36 @@ function whatsapp_url(string $message = ''): string
 }
 
 /**
- * Return the store icon sprite path.
+ * Inline SVG icon markup.
  */
 function icon(string $name, string $class = 'icon'): string
 {
-    // Forward to the Helpers class if it exists, otherwise return a placeholder
-    // SVG class. Templates should call icon() only after helpers are loaded.
-    if (class_exists(\App\Helpers\Helpers::class)) {
-        return \App\Helpers\Helpers::icon($name, $class);
+    if (class_exists(\App\Helpers\Icons::class)) {
+        return \App\Helpers\Icons::inline($name, $class);
     }
 
-    return $class;
+    return '';
+}
+
+/**
+ * Render a partial from inside a view or the layout.
+ *
+ * @param array<string, mixed> $data
+ */
+function partial(string $name, array $data = []): void
+{
+    if (class_exists(View::class) && method_exists(View::class, 'partial')) {
+        View::partial($name, $data);
+    }
+}
+
+/**
+ * Redirect to a local path and stop the request.
+ */
+function redirect(string $path = '/'): void
+{
+    header('Location: ' . url($path), true, 302);
+    exit;
 }
 
 /**

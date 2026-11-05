@@ -48,6 +48,7 @@ spl_autoload_register(static function (string $class): void {
 // the first controller is instantiated.
 require APP_PATH . '/helpers/functions.php';
 require APP_PATH . '/helpers/helpers.php';
+require APP_PATH . '/helpers/Icons.php';
 require APP_PATH . '/helpers/Products.php';
 
 // Explicit models next: controllers reference these by full class name before
@@ -179,6 +180,8 @@ require APP_PATH . '/routes.php';
 require APP_PATH . '/controllers/HomeController.php';
 require APP_PATH . '/controllers/ProductController.php';
 require APP_PATH . '/controllers/CartController.php';
+require APP_PATH . '/controllers/SearchController.php';
+require APP_PATH . '/controllers/WishlistController.php';
 require APP_PATH . '/controllers/ErrorController.php';
 
 return $router;

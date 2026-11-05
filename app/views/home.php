@@ -3,22 +3,24 @@
 declare(strict_types=1);
 
 /**
- * Home page — catalogue live.
+ * Home page.
  *
- * @var array  $slides
- * @var array  $whyUs
- * @var array  $promo
- * @var array  $featured
- * @var bool   $debug
+ * Reading order on purpose: hero → reassurance → products → promotion.
+ * The promotion block sits after the catalogue so the visitor sees the
+ * collection first, then the offer that closes the sale.
+ *
+ * @var array $slides
+ * @var array $whyUs
+ * @var array $promo
+ * @var array $featured
+ * @var array $wishSlugs
  */
-
-$debug = $debug ?? false;
 ?>
 <section class="hero" aria-labelledby="heroTitle">
-    <h1 class="visually-hidden" id="heroTitle">Accueil</h1>
+    <h1 class="visually-hidden" id="heroTitle">Shoop Moda Style — mode turque femme et enfant</h1>
 
     <div class="hero-track" id="heroTrack">
-        <?php foreach ($slides as $index => $slide): ?>
+        <?php foreach ($slides as $slide): ?>
             <article class="hero-slide hero-slide--<?= e($slide['theme'] ?? 'light') ?>">
                 <p class="hero-eyebrow"><?= e($slide['eyebrow'] ?? '') ?></p>
                 <h2 class="hero-title"><?= e($slide['title'] ?? '') ?></h2>
@@ -61,6 +63,29 @@ $debug = $debug ?? false;
     </div>
 </section>
 
+<?php if (!empty($featured)): ?>
+    <section class="section" aria-labelledby="featuredTitle">
+        <div class="wrap">
+            <div class="section-head section-head--hero">
+                <div>
+                    <p class="eyebrow">Sélection de la semaine</p>
+                    <h2 class="section-title" id="featuredTitle">Nos pièces les plus demandées</h2>
+                    <p class="section-subtitle">
+                        Tissus turcs, coupes actuelles et tailles du S au XXL. Ajoutez vos coups de cœur au panier.
+                    </p>
+                </div>
+                <a class="section-link" href="<?= e(url('/categorie/femme')) ?>">Toute la collection</a>
+            </div>
+
+            <div class="product-grid">
+                <?php foreach ($featured as $product): ?>
+                    <?php partial('partials/product-card', ['product' => $product, 'wishSlugs' => $wishSlugs ?? []]); ?>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </section>
+<?php endif; ?>
+
 <section class="wrap" aria-labelledby="promoTitle">
     <div class="promo-banner">
         <div class="promo-content">
@@ -74,63 +99,3 @@ $debug = $debug ?? false;
         <span class="promo-mark" aria-hidden="true">✦</span>
     </div>
 </section>
-
-<?php if (!empty($featured)): ?>
-    <section class="section" aria-labelledby="featuredTitle">
-        <div class="wrap">
-            <div class="section-head">
-                <h2 class="section-title" id="featuredTitle">En vedette</h2>
-                <a class="section-link" href="<?= e(url('/categorie/femme')) ?>">Voir tout →</a>
-            </div>
-
-            <div class="product-grid">
-                <?php foreach ($featured as $product): ?>
-                    <article class="product-card">
-                        <a class="product-link" href="<?= e(url('/produit/' . $product['slug'])) ?>">
-                            <div class="product-media">
-                                <?php $img = $product['primary_image'] ?? null; ?>
-                                <img
-                                    src="<?= e(product_image_url((int) $product['id'], $img)) ?>"
-                                    alt="<?= e($product['title']) ?>"
-                                    loading="lazy"
-                                    width="400"
-                                    height="500"
-                                >
-                                <?php if (!empty($product['is_flash'])): ?>
-                                    <span class="product-badge product-badge--flash">Flash</span>
-                                <?php endif; ?>
-                                <?php if (!empty($product['is_featured'])): ?>
-                                    <span class="product-badge product-badge--featured">Populaire</span>
-                                <?php endif; ?>
-                            </div>
-
-                            <div class="product-info">
-                                <h2 class="product-title"><?= e($product['title']) ?></h2>
-
-                                <?php
-                                $price  = (float) ($product['sale_price'] ?? $product['price'] ?? 0);
-                                $oldPrice = (float) ($product['price'] ?? 0);
-                                ?>
-                                <div class="product-price">
-                                    <?php if (!empty($product['sale_price'])): ?>
-                                        <span class="price current"><?= e(format_price($price)) ?></span>
-                                        <span class="price old"><?= e(format_price($oldPrice)) ?></span>
-                                    <?php else: ?>
-                                        <span class="price current"><?= e(format_price($price)) ?></span>
-                                    <?php endif; ?>
-                                </div>
-
-                                <?php if (!empty($product['rating'])): ?>
-                                    <div class="product-rating" aria-label="Note : <?= e($product['rating']) ?> / 5">
-                                        <?= icon('star', 'icon icon--sm') ?>
-                                        <span><?= e($product['rating']) ?></span>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-                        </a>
-                    </article>
-                <?php endforeach; ?>
-            </div>
-        </div>
-    </section>
-<?php endif; ?>

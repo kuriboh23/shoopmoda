@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-label="Visuel indisponible — Shoop Moda Style">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F8F5F1"/>
+      <stop offset="1" stop-color="#E7E2DB"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="1000" fill="url(#bg)"/>
+  <circle cx="650" cy="180" r="190" fill="#704F38" opacity="0.08"/>
+  <circle cx="120" cy="880" r="150" fill="#C2A691" opacity="0.18"/>
+  <rect x="56" y="56" width="688" height="888" rx="10" fill="none" stroke="#704F38" stroke-opacity="0.14"/>
+  <g fill="none" stroke="#704F38" stroke-opacity="0.55" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M400 380a70 70 0 1 0 0 140 70 70 0 0 0 0-140z"/>
+    <path d="m505 525 55 55"/>
+  </g>
+  <text x="400" y="690" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif"
+        font-size="42" font-weight="700" fill="#704F38">Shoop Moda</text>
+  <text x="400" y="740" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+        font-size="18" letter-spacing="6" fill="#797979">VISUEL BIENTÔT DISPONIBLE</text>
+  <text x="400" y="905" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+        font-size="14" letter-spacing="6" fill="#797979" opacity="0.8">SHOOP MODA STYLE</text>
+</svg>

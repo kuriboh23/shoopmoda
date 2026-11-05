@@ -59,24 +59,13 @@ $wishCount   = $wishCount ?? 0;
 <body class="<?= e($bodyClass ?? '') ?>">
     <a class="skip-link" href="#contenu">Aller au contenu</a>
 
-    <?php if (function_exists('partial')): ?>
-        <?php partial('partials/header', ['cartCount' => $cartCount, 'wishCount' => $wishCount]); ?>
-        <?php partial('partials/drawer'); ?>
-    <?php else: ?>
-        <?php if (isset($partial) && $partial instanceof \Closure): ?>
-            <?php $partial('partials/header', ['cartCount' => $cartCount, 'wishCount' => $wishCount]); ?>
-            <?php $partial('partials/drawer'); ?>
-        <?php endif; ?>
-    <?php endif; ?>
+    <?php partial('partials/header', ['cartCount' => $cartCount, 'wishCount' => $wishCount]); ?>
+    <?php partial('partials/drawer'); ?>
 
     <main id="contenu" class="site-main">
         <?= $content ?>
     </main>
 
-    <?php if (function_exists('partial')): ?>
-        <?php partial(partials/footer); ?>
-    <?php elseif (isset($partial) && $partial instanceof \Closure): ?>
-        <?php $partial('partials/footer'); ?>
-    <?php endif; ?>
+    <?php partial('partials/footer'); ?>
 </body>
 </html>
