@@ -12,6 +12,7 @@ declare(strict_types=1);
  * @var array{products: array<int, array<string, mixed>>, total: int, page: int, per_page: int, total_pages: int} $products
  * @var array<int, array<string, mixed>> $categories
  * @var string                           $query
+ * @var string|null                      $suggestedQuery
  * @var string                           $activeCategory
  * @var string                           $sort
  * @var array<int, string>               $wishSlugs
@@ -93,9 +94,19 @@ $catalogUrl = static function (array $overrides = []) use ($query, $activeCatego
         <?php endforeach; ?>
     </nav>
 
+    <?php if ($query !== '' && !empty($suggestedQuery)): ?>
+        <div class="search-didyoumean">
+            <?= icon('search', 'icon') ?>
+            <p class="search-didyoumean-text">
+                Aucune correspondance pour « <strong><?= e($query) ?></strong> ».
+                Affichage des résultats pour <strong>« <?= e($suggestedQuery) ?> »</strong>.
+            </p>
+        </div>
+    <?php endif; ?>
+
     <?php if ($query !== ''): ?>
         <div class="catalog-query">
-            <span>Résultats pour <strong>« <?= e($query) ?> »</strong></span>
+            <span>Résultats pour <strong>« <?= e($suggestedQuery ?? $query) ?> »</strong></span>
             <a class="catalog-query-clear" href="<?= e($catalogUrl(['q' => '', 'page' => ''])) ?>">
                 Effacer
                 <?= icon('close', 'icon icon--sm') ?>

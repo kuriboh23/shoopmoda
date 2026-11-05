@@ -92,6 +92,23 @@ final class ProductController
             12
         );
 
+        // Misspelt query: retry with the closest word from the catalogue.
+        $suggested = null;
+
+        if ($query !== '' && (int) ($result['total'] ?? 0) === 0) {
+            $suggested = Product::correctQuery($query);
+
+            if ($suggested !== null) {
+                $result = Product::catalog(
+                    $suggested,
+                    $categorySlug !== '' ? $categorySlug : null,
+                    $sort,
+                    $page,
+                    12
+                );
+            }
+        }
+
         View::render('products/index', [
             'title'          => 'Toutes les pièces — ' . config('app_name'),
             'description'    => 'Parcourez toutes les pièces Shoop Moda Style : femme, enfant, pyjamas et robes importés de Turquie.',
@@ -102,6 +119,7 @@ final class ProductController
             'products'       => $result,
             'categories'     => Category::all(),
             'query'          => $query,
+            'suggestedQuery' => $suggested,
             'activeCategory' => $categorySlug,
             'sort'           => $sort,
             'page'           => 'catalog',

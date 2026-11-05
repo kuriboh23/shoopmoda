@@ -8,12 +8,19 @@ declare(strict_types=1);
  * The input shows live title suggestions (JSON endpoint) and the recent
  * searches kept in localStorage. Submitting lands on the catalogue with
  * the query applied; a server-rendered result list stays below as a
- * no-JavaScript fallback.
+ * no-JavaScript fallback. A misspelt query is corrected server-side to
+ * the closest word found in the catalogue.
  *
  * @var string                          $query
+ * @var string|null                     $suggested
  * @var array<int, array<string, mixed>> $results
+ * @var array<int, array<string, mixed>> $popular
  * @var array<int, string>              $wishSlugs
  */
+
+$popularTerms = ['pyjama', 'robe', 'ensemble', 'satin', 'femme', 'enfant'];
+$resultCount  = count($results);
+$shownQuery   = $suggested ?? $query;
 ?>
 <section class="wrap search-page">
     <header class="category-head search-head">
@@ -54,22 +61,45 @@ declare(strict_types=1);
 
         <div class="search-suggest" id="searchSuggestions" role="listbox" aria-label="Suggestions" hidden></div>
 
-        <div class="search-history" id="searchHistory" hidden>
-            <span class="search-history-label">Recherches récentes</span>
-            <div class="search-history-list" data-history-list></div>
-            <button type="button" class="search-history-clear" data-history-clear>Effacer</button>
-        </div>
+        <?php if ($query === ''): ?>
+            <div class="search-history" id="searchHistory" hidden>
+                <span class="search-history-label">Recherches récentes</span>
+                <div class="search-history-list" data-history-list></div>
+                <button type="button" class="search-history-clear" data-history-clear>Effacer</button>
+            </div>
 
-        <p class="search-tip">Essayez « pyjama », « robe » ou « satin ».</p>
+            <div class="search-popular">
+                <h2 class="search-popular-title">Recherches populaires</h2>
+                <div class="search-chips">
+                    <?php foreach ($popularTerms as $term): ?>
+                        <a class="search-chip" href="<?= e(url('/produits?q=' . rawurlencode($term))) ?>">
+                            <?= icon('search', 'icon') ?>
+                            <?= e(ucfirst($term)) ?>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endif; ?>
     </div>
 
     <?php if ($query !== ''): ?>
-        <p class="search-count">
-            <?= count($results) ?> <?= count($results) === 1 ? 'résultat' : 'résultats' ?>
-            pour « <?= e($query) ?> »
-        </p>
+        <?php if ($suggested !== null && $suggested !== ''): ?>
+            <div class="search-didyoumean">
+                <?= icon('search', 'icon') ?>
+                <p class="search-didyoumean-text">
+                    Aucune correspondance pour « <strong><?= e($query) ?></strong> ».
+                    Affichage des résultats pour
+                    <a href="<?= e(url('/recherche?q=' . rawurlencode($suggested))) ?>">« <?= e($suggested) ?> »</a>.
+                </p>
+            </div>
+        <?php endif; ?>
 
-        <?php if (!empty($results)): ?>
+        <?php if ($resultCount > 0): ?>
+            <p class="search-count">
+                <?= $resultCount ?> <?= $resultCount === 1 ? 'résultat' : 'résultats' ?>
+                pour « <?= e($shownQuery) ?> »
+            </p>
+
             <div class="product-grid">
                 <?php foreach ($results as $product): ?>
                     <?php partial('partials/product-card', ['product' => $product, 'wishSlugs' => $wishSlugs ?? []]); ?>
@@ -83,5 +113,15 @@ declare(strict_types=1);
                 <a class="btn btn--dark btn--compact" href="<?= e(url('/produits')) ?>">Voir toutes les pièces</a>
             </div>
         <?php endif; ?>
+    <?php elseif (!empty($popular)): ?>
+        <section class="search-best" aria-labelledby="searchBestTitle">
+            <h2 class="search-popular-title" id="searchBestTitle">Nos pièces les plus demandées</h2>
+
+            <div class="product-grid">
+                <?php foreach ($popular as $product): ?>
+                    <?php partial('partials/product-card', ['product' => $product, 'wishSlugs' => $wishSlugs ?? []]); ?>
+                <?php endforeach; ?>
+            </div>
+        </section>
     <?php endif; ?>
 </section>

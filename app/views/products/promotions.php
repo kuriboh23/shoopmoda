@@ -25,10 +25,7 @@ $showCountdown = $nextEndAt !== null && $flashSales !== [];
         </div>
 
         <?php if ($showCountdown): ?>
-            <div class="countdown-card" role="timer" aria-live="polite">
-                <span class="countdown-label">L'offre se termine dans</span>
-                <span class="countdown-timer" id="countdownTimer" data-end="<?= e($nextEndAt) ?>">-- : -- : --</span>
-            </div>
+            <?php partial('partials/countdown', ['endAt' => $nextEndAt, 'label' => 'L’offre se termine dans']); ?>
         <?php endif; ?>
     </header>
 

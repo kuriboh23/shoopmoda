@@ -292,6 +292,122 @@ final class Product
     }
 
     /**
+     * Words used in active product titles, keyed by their folded form.
+     *
+     * Used only to turn a misspelled query into the closest real word.
+     *
+     * @return array<string, string> folded word => original spelling
+     */
+    public static function vocabulary(): array
+    {
+        static $words = null;
+
+        if ($words !== null) {
+            return $words;
+        }
+
+        $words = [];
+        $rows  = Database::select('SELECT title FROM products WHERE is_active = 1 ORDER BY id ASC LIMIT 400');
+
+        foreach ($rows as $row) {
+            $title = (string) ($row['title'] ?? '');
+
+            foreach (preg_split('/[^\p{L}\p{N}]+/u', $title, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $word) {
+                $folded = self::fold($word);
+
+                if (mb_strlen($folded) < 3 || ctype_digit($folded) || isset($words[$folded])) {
+                    continue;
+                }
+
+                $words[$folded] = mb_strtolower($word);
+            }
+        }
+
+        return $words;
+    }
+
+    /**
+     * Closest real words for a query the catalogue could not match.
+     *
+     * Returns null when every word is already known (or too far from the
+     * vocabulary), so the caller keeps showing the user's own query.
+     */
+    public static function correctQuery(string $query): ?string
+    {
+        $vocabulary = self::vocabulary();
+
+        if ($vocabulary === []) {
+            return null;
+        }
+
+        $tokens = preg_split('/[^\p{L}\p{N}]+/u', trim($query), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        if ($tokens === []) {
+            return null;
+        }
+
+        $changed = false;
+        $words   = [];
+
+        foreach ($tokens as $token) {
+            $folded = self::fold($token);
+
+            if ($folded === '' || mb_strlen($folded) < 3 || isset($vocabulary[$folded])) {
+                $words[] = $token;
+
+                continue;
+            }
+
+            // Typos grow with the word: short words tolerate one edit only.
+            $limit        = mb_strlen($folded) <= 4 ? 1 : (mb_strlen($folded) <= 7 ? 2 : 3);
+            $best         = null;
+            $bestDistance = $limit + 1;
+
+            foreach ($vocabulary as $candidate => $original) {
+                if (abs(strlen($candidate) - strlen($folded)) > $limit) {
+                    continue;
+                }
+
+                $distance = levenshtein($folded, $candidate);
+
+                if ($distance < $bestDistance) {
+                    $bestDistance = $distance;
+                    $best         = $original;
+                }
+            }
+
+            if ($best !== null) {
+                $words[] = $best;
+                $changed = true;
+            } else {
+                $words[] = $token;
+            }
+        }
+
+        return $changed ? implode(' ', $words) : null;
+    }
+
+    /**
+     * Lowercase, accent-free form used for distance comparisons.
+     */
+    private static function fold(string $value): string
+    {
+        $value = mb_strtolower($value);
+        $value = strtr($value, [
+            'à' => 'a', 'á' => 'a', 'â' => 'a', 'ä' => 'a', 'ã' => 'a', 'å' => 'a',
+            'ç' => 'c',
+            'è' => 'e', 'é' => 'e', 'ê' => 'e', 'ë' => 'e',
+            'ì' => 'i', 'í' => 'i', 'î' => 'i', 'ï' => 'i',
+            'ñ' => 'n',
+            'ò' => 'o', 'ó' => 'o', 'ô' => 'o', 'ö' => 'o', 'õ' => 'o',
+            'ù' => 'u', 'ú' => 'u', 'û' => 'u', 'ü' => 'u',
+            'ý' => 'y', 'ÿ' => 'y', 'œ' => 'oe', 'æ' => 'ae', 'ß' => 'ss',
+        ]);
+
+        return preg_replace('/[^a-z0-9]+/', '', $value) ?? '';
+    }
+
+    /**
      * Turn a title into a URL-safe slug.
      */
     public static function slugify(string $value): string
@@ -509,7 +625,7 @@ final class Product
             return null;
         }
 
-        return 'Promo flash active — jusqu’à 40% de réduction. Se termine dans ' . self::timeUntil($endAt);
+        return 'Promotions en cours — elles se terminent dans ' . self::timeUntil($endAt);
     }
 
     private static function timeUntil(string $endAt): string

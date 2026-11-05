@@ -456,6 +456,10 @@
 
     if (timer) {
         var end = Date.parse(String(timer.getAttribute('data-end') || '').replace(' ', 'T'));
+        var daysEl = timer.querySelector('[data-count="days"]');
+        var hoursEl = timer.querySelector('[data-count="hours"]');
+        var minutesEl = timer.querySelector('[data-count="minutes"]');
+        var secondsEl = timer.querySelector('[data-count="seconds"]');
 
         function pad(value) {
             return value < 10 ? '0' + value : String(value);
@@ -463,11 +467,26 @@
 
         function tick() {
             var remaining = Math.max(0, Math.floor((end - Date.now()) / 1000));
-            var hours = Math.floor(remaining / 3600);
+            var days = Math.floor(remaining / 86400);
+            var hours = Math.floor((remaining % 86400) / 3600);
             var minutes = Math.floor((remaining % 3600) / 60);
             var seconds = remaining % 60;
 
-            timer.textContent = pad(hours) + ' : ' + pad(minutes) + ' : ' + pad(seconds);
+            if (daysEl) {
+                daysEl.textContent = pad(days);
+            }
+
+            if (hoursEl) {
+                hoursEl.textContent = pad(hours);
+            }
+
+            if (minutesEl) {
+                minutesEl.textContent = pad(minutes);
+            }
+
+            if (secondsEl) {
+                secondsEl.textContent = pad(seconds);
+            }
 
             if (remaining > 0) {
                 window.setTimeout(tick, 1000);
@@ -703,7 +722,7 @@
             input.setAttribute('aria-expanded', 'false');
         }
 
-        function renderSuggestions(items) {
+        function renderSuggestions(items, suggestion) {
             if (!box) {
                 return;
             }
@@ -711,7 +730,40 @@
             box.textContent = '';
 
             if (!items.length) {
-                closeSuggestions();
+                if (!suggestion) {
+                    closeSuggestions();
+
+                    return;
+                }
+
+                // Misspelled query: offer the closest real word instead.
+                var hint = document.createElement('button');
+                hint.type = 'button';
+                hint.className = 'suggestion suggestion--hint';
+                hint.setAttribute('role', 'option');
+
+                var hintMain = document.createElement('span');
+                hintMain.className = 'suggestion-main';
+
+                var hintTitle = document.createElement('span');
+                hintTitle.className = 'suggestion-title';
+                hintTitle.textContent = 'Voulez-vous dire « ' + suggestion + ' » ?';
+
+                hintMain.appendChild(hintTitle);
+                hint.appendChild(hintMain);
+
+                hint.addEventListener('click', function () {
+                    if (input) {
+                        input.value = suggestion;
+                        remember(suggestion);
+                    }
+
+                    form.submit();
+                });
+
+                box.appendChild(hint);
+                box.hidden = false;
+                input.setAttribute('aria-expanded', 'true');
 
                 return;
             }
@@ -792,7 +844,7 @@
                         return;
                     }
 
-                    renderSuggestions((data && data.items) || []);
+                    renderSuggestions((data && data.items) || [], data && data.suggestion);
                 })
                 .catch(function () {
                     // Aborted or offline: keep the last visible state.

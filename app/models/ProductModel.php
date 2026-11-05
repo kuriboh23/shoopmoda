@@ -113,7 +113,7 @@ final class ProductModel
 
             return $diff > 0
                 ? null
-                : 'Flash sale active — up to 40% off. Ends in ' . self::timeUntil($endAt);
+                : 'Promotions en cours — fin dans ' . self::timeUntil($endAt);
         } catch (\Throwable) {
             return null;
         }

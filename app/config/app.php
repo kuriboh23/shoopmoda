@@ -46,7 +46,7 @@ return [
         [
             'eyebrow' => 'Shoop Moda Style',
             'title'   => 'Nouvelle Collection',
-            'text'    => 'Jusqu’à -50% sur votre première commande',
+            'text'    => 'Découvrez les nouveautés de la saison',
             'cta'     => 'Découvrir',
             'link'    => '/categorie/femme',
             'theme'   => 'light',
@@ -78,11 +78,12 @@ return [
     ],
 
     // Static promo banner (approved home block).
+    // Keep the copy factual: only promise what the catalogue actually offers.
     'promo_banner' => [
         'badge' => 'Offre limitée',
-        'title' => 'Votre première commande à -50%',
-        'text'  => 'Offre valable sur la nouvelle collection, jusqu’à épuisement des stocks.',
-        'cta'   => 'Commander',
-        'link'  => '/panier',
+        'title' => 'Nouveautés à prix de lancement',
+        'text'  => 'Une sélection de pièces de la saison à prix réduit, dans la limite des stocks disponibles.',
+        'cta'   => 'Voir les promotions',
+        'link'  => '/promotions',
     ],
 ];

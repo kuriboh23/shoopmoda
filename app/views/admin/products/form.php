@@ -130,7 +130,7 @@ $error    = static fn (string $key): string => isset($errors[$key]) ? ' is-inval
                     step="1"
                     min="0"
                     name="stock"
-                    value="<?= e($product['stock'] ?? '0') ?>"
+                    value="<?= e($product['stock'] ?? '10') ?>"
                     inputmode="numeric"
                     required
                 >
