@@ -95,8 +95,8 @@ final class View
             if (is_file(APP_PATH . '/helpers/functions.php')) {
                 require APP_PATH . '/helpers/functions.php';
             }
-            if (is_file(APP_PATH . '/helpers/helpers.php')) {
-                require APP_PATH . '/helpers/helpers.php';
+            if (is_file(APP_PATH . '/helpers/Helpers.php')) {
+                require APP_PATH . '/helpers/Helpers.php';
             }
             if (is_file(APP_PATH . '/helpers/icons.php')) {
                 require APP_PATH . '/helpers/icons.php';

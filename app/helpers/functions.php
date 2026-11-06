@@ -6,7 +6,11 @@ use App\Core\Router;
 use App\Core\View;
 
 /**
- * Global helpers. Loaded once by bootstrap.php.
+ * Global template helpers. Loaded once by bootstrap.php.
+ *
+ * Everything the templates need to build a link lives here: url() is
+ * root-relative, so the shop works on any domain and in any folder without
+ * being told its own address.
  */
 
 /**
@@ -18,20 +22,48 @@ function e(mixed $value): string
 }
 
 /**
- * Read a configuration value (app/config/*.php merged into one flat array).
+ * Folder the site is served from, discovered from the running script.
+ *
+ *   https://example.com/            -> ""          (document root, htdocs/)
+ *   https://example.com/shop/       -> "/shop"     (sub-folder install)
+ *
+ * This is the only "base path" logic in the project: no setting to keep in
+ * sync with the real address, so links and assets can never point at the
+ * wrong host.
+ */
+function base_path(): string
+{
+    static $base = null;
+
+    if ($base === null) {
+        $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '/index.php'));
+        $base   = rtrim(str_replace('\\', '/', dirname($script)), '/');
+
+        if ($base === '/' || $base === '.') {
+            $base = '';
+        }
+    }
+
+    return $base;
+}
+
+/**
+ * Read a setting from config.php at the root of the site.
  */
 function config(string $key, mixed $default = null): mixed
 {
     static $config = null;
 
     if ($config === null) {
-        $config = [];
+        $root    = defined('ROOT_PATH') ? ROOT_PATH : dirname(__DIR__, 2);
+        $config  = [];
+        $file    = $root . '/config.php';
 
-        foreach (glob(APP_PATH . '/config/*.php') ?: [] as $file) {
+        if (is_file($file)) {
             $values = require $file;
 
             if (is_array($values)) {
-                $config += $values;
+                $config = $values;
             }
         }
     }
@@ -40,7 +72,35 @@ function config(string $key, mixed $default = null): mixed
 }
 
 /**
- * Build an absolute URL. Existing absolute URLs are returned untouched.
+ * Should links look like /produit/robe instead of /?p=/produit/robe?
+ *
+ * Pretty URLs need the ".htaccess" file sitting next to index.php, because
+ * that is what forwards /produit/robe to index.php on the server.
+ *
+ * The setting is on, but the file is checked too: FTP clients hide names
+ * starting with a dot, so .htaccess is the one file people forget to upload.
+ * When it is absent the links quietly become /?p=/produit/robe, which works
+ * on every host with no configuration at all. Either way the shop runs.
+ */
+function pretty_urls(): bool
+{
+    static $pretty = null;
+
+    if ($pretty === null) {
+        $root   = defined('ROOT_PATH') ? ROOT_PATH : dirname(__DIR__, 2);
+        $pretty = (bool) config('pretty_urls', true) && is_file($root . '/.htaccess');
+    }
+
+    return $pretty;
+}
+
+/**
+ * Link to a page of the site: "/?p=/panier", or "/panier" when clean URLs
+ * are turned on in config.php.
+ *
+ * Absolute URLs (https://wa.me/...) are returned untouched. Real files
+ * (app.css, photo.webp, favicon.svg) are always linked directly, never
+ * through the router, so styles and images load in every mode.
  */
 function url(string $path = ''): string
 {
@@ -48,18 +108,94 @@ function url(string $path = ''): string
         return $path;
     }
 
-    $base = (string) config('app_url');
-    $path = ltrim($path, '/');
+    $base  = base_path();
+    $query = '';
+    $hash  = '';
 
-    if ($path === '') {
-        return $base . '/';
+    if (($mark = strpos($path, '#')) !== false) {
+        $hash = substr($path, $mark);
+        $path = substr($path, 0, $mark);
     }
 
-    return $base . '/' . $path;
+    if (($mark = strpos($path, '?')) !== false) {
+        $query = substr($path, $mark);
+        $path  = substr($path, 0, $mark);
+    }
+
+    $path = trim($path, '/');
+
+    // A last segment containing a dot is a file on disk, not a page.
+    if ($path !== '' && str_contains(basename($path), '.')) {
+        return $base . '/' . $path . $query . $hash;
+    }
+
+    // Home page.
+    if ($path === '') {
+        return $base . '/' . $query . $hash;
+    }
+
+    if (pretty_urls()) {
+        return $base . '/' . $path . $query . $hash;
+    }
+
+    // No rewrite on the host: the page travels in "p", read by the router.
+    $link = $base . '/?p=' . rawurlencode('/' . $path);
+
+    if ($query !== '') {
+        $link .= '&' . ltrim($query, '?');
+    }
+
+    return $link . $hash;
 }
 
 /**
- * Public asset URL with a filemtime cache-buster (safe to cache for a year).
+ * Hidden field that keeps the current page when a GET form is submitted.
+ *
+ * A GET form REPLACES the query string of its action, which would drop the
+ * "p" part and send the visitor to the home page. This field puts it back.
+ * It prints nothing when clean URLs are on, where the page is in the path
+ * and cannot be lost.
+ */
+function route_field(string $path): string
+{
+    if (pretty_urls()) {
+        return '';
+    }
+
+    return '<input type="hidden" name="p" value="' . e('/' . trim($path, '/')) . '">';
+}
+
+/**
+ * Full URL including the domain, built from the current request.
+ * Used for canonical / Open Graph tags, which must be absolute.
+ *
+ * It accepts either a page (/panier) or a link that url() already built
+ * (/shop/panier, /shop/?p=/panier). A finished link is only given the
+ * domain, never encoded a second time.
+ */
+function abs_url(string $path = ''): string
+{
+    if (preg_match('#^https?://#i', $path) === 1) {
+        return $path;
+    }
+
+    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+
+    $host   = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
+    $origin = ($https ? 'https' : 'http') . '://' . $host;
+    $base   = base_path();
+
+    // Already a complete site path: just add the domain.
+    if ($base !== '' && ($path === $base || str_starts_with($path, $base . '/'))) {
+        return $origin . '/' . ltrim($path, '/');
+    }
+
+    return $origin . url($path);
+}
+
+/**
+ * Asset URL with a filemtime cache-buster. Safe to cache for a year.
  */
 function asset(string $path): string
 {
@@ -78,28 +214,30 @@ function asset(string $path): string
 }
 
 /**
- * Current request path (path + query string), used by the layout and Router.
+ * Current page path with its query string, without the install folder.
+ * Example: "/recherche?q=robe". The routing parameter "p" is left out, so
+ * url(current_path()) gives back a working link.
  */
 function current_path(): string
 {
-    $uri = $_SERVER['REQUEST_URI'] ?? '/';
+    $query = (string) ($_SERVER['QUERY_STRING'] ?? '');
 
-    $path = parse_url($uri, PHP_URL_PATH) ?? '/';
+    if (isset($_GET['p'])) {
+        parse_str($query, $parameters);
+        unset($parameters['p']);
+        $query = http_build_query($parameters);
+    }
 
-    $query = $_SERVER['QUERY_STRING'] ?? '';
-
-    return $query !== '' ? $path . '?' . $query : $path;
+    return $query !== '' ? Router::path() . '?' . $query : Router::path();
 }
 
 /**
- * Current path name (the path only, no query string), used by the header
- * and the router as a fallback when REQUEST_URI is not reliable.
+ * Current page path only, without the install folder. Used by the header and
+ * the drawer to highlight the active menu entry.
  */
 function current_pathname(): string
 {
-    $uri = $_SERVER['REQUEST_URI'] ?? '/';
-
-    return parse_url($uri, PHP_URL_PATH) ?? '/';
+    return Router::path();
 }
 
 /**
@@ -111,15 +249,14 @@ function current_method(): string
 }
 
 /**
- * Build a URL that opens the store WhatsApp number with a pre-filled message.
+ * Build a URL that opens the shop WhatsApp number with a pre-filled message.
  */
 function whatsapp_url(string $message = '', bool $preserveFormatting = false): string
 {
     static $number = null;
 
     if ($number === null) {
-        $number = (string) config('whatsapp_number');
-        $number = preg_replace('/\D+/', '', $number);
+        $number = preg_replace('/\D+/', '', (string) config('whatsapp_number'));
     }
 
     if ($message !== '') {
@@ -160,7 +297,7 @@ function partial(string $name, array $data = []): void
 }
 
 /**
- * Redirect to a local path and stop the request.
+ * Redirect to a page of the site and stop the request.
  */
 function redirect(string $path = '/'): void
 {
@@ -169,7 +306,7 @@ function redirect(string $path = '/'): void
 }
 
 /**
- * Read a single setting from the settings table / config fallback.
+ * Read a single setting from the settings table, falling back to config.php.
  */
 function setting(string $key, ?string $default = null): ?string
 {
@@ -189,7 +326,7 @@ function product_image_url(int $productId, ?string $image = null): string
         return \App\Helpers\Helpers::productImageUrl($productId, $image);
     }
 
-    return asset('images/placeholders/product.svg');
+    return asset('images/placeholders/default.svg');
 }
 
 /**
@@ -249,7 +386,7 @@ function wish_count(): int
 }
 
 /**
- * Return a formatted flash sale alert message, or null if none is active.
+ * Formatted flash sale alert message, or null when none is active.
  */
 function flash_sale_alert(): ?string
 {
@@ -269,7 +406,7 @@ function flash_sale_alert(): ?string
 }
 
 /**
- * Return the next flash sale end date, or null if none.
+ * Next flash sale end date, or null when there is none.
  */
 function flash_sale_ends_at(): ?string
 {
@@ -358,7 +495,7 @@ function redirect_external(string $url): void
 }
 
 /**
- * URL inside the admin area (path is configurable through ADMIN_PATH).
+ * URL inside the admin area (folder configured by 'admin_path').
  */
 function admin_url(string $path = ''): string
 {

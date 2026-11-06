@@ -3,12 +3,12 @@
 declare(strict_types=1);
 
 /**
- * Génère les visuels de démonstration (SVG) du catalogue.
+ * Generates the demo (SVG) images of the catalogue.
  *
  *   php tools/make-placeholders.php
  *
- * Chaque produit reçoit deux visuels minimalistes aux couleurs de la
- * marque, remplacés plus tard par de vraies photos via l'administration.
+ * Every product gets two minimalist images in the brand colours, to be
+ * replaced later by real photos from the admin area.
  */
 
 $products = [
@@ -29,7 +29,7 @@ $products = [
 $target = dirname(__DIR__) . '/assets/images/placeholders';
 
 if (!is_dir($target) && !mkdir($target, 0775, true) && !is_dir($target)) {
-    fwrite(STDERR, "Impossible de créer {$target}\n");
+    fwrite(STDERR, "Cannot create {$target}\n");
     exit(1);
 }
 
@@ -43,7 +43,7 @@ function placeholder(array $product, int $variant): string
     $label      = htmlspecialchars($word, ENT_QUOTES, 'UTF-8');
     $alt        = htmlspecialchars('Visuel de démonstration — ' . $product['word'], ENT_QUOTES, 'UTF-8');
 
-    // Deux compositions différentes pour la galerie produit.
+    // Two different compositions for the product gallery.
     if ($variant === 1) {
         $circleA = '<circle cx="650" cy="170" r="190" fill="#704F38" opacity="0.09"/>'
             . '<circle cx="110" cy="890" r="150" fill="#C2A691" opacity="0.20"/>'
@@ -89,7 +89,7 @@ foreach ($products as $product) {
         $file   = $target . '/' . $product['slug'] . $suffix . '.svg';
 
         if (file_put_contents($file, placeholder($product, $variant)) === false) {
-            fwrite(STDERR, "Échec : {$file}\n");
+            fwrite(STDERR, "Failed: {$file}\n");
             exit(1);
         }
 
@@ -97,4 +97,4 @@ foreach ($products as $product) {
     }
 }
 
-echo "{$count} visuels générés dans assets/images/placeholders/\n";
+echo "{$count} images written to assets/images/placeholders/\n";

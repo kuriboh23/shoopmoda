@@ -12,37 +12,46 @@ use App\Controllers\WishlistController;
 use App\Core\Router;
 
 /**
- * Route table.
+ * URL TABLE - one line per page.
  *
- * Placeholders use the `{name}` syntax understood by App\Core\Router:
- * a regex written by hand is quoted literally and would never match.
+ * Format:  $router->get('/url', [Controller::class, 'method']);
+ *
+ * A {placeholder} matches any single value and is passed to the method as a
+ * string. Never write a regex here: the router only understands {name}.
+ *
+ * Adding a page = add one line here + one method in the controller.
  *
  * @var Router $router
  */
 
 $router->get('/', [HomeController::class, 'index']);
 
+// Catalogue
 $router->get('/produits', [ProductController::class, 'catalog']);
 $router->get('/categorie/{slug}', [ProductController::class, 'category']);
 $router->get('/produit/{slug}', [ProductController::class, 'product']);
 $router->get('/promotions', [ProductController::class, 'promotions']);
 
+// Search
 $router->get('/recherche', [SearchController::class, 'index']);
 $router->get('/recherche/suggestions', [SearchController::class, 'suggestions']);
 
+// Wishlist
 $router->get('/favoris', [WishlistController::class, 'index']);
 $router->post('/favoris/ajouter', [WishlistController::class, 'toggle']);
 
+// Cart
 $router->get('/panier', [CartController::class, 'index']);
 $router->post('/panier/ajouter', [CartController::class, 'add']);
 $router->post('/panier/retirer', [CartController::class, 'remove']);
 $router->post('/panier/quantite', [CartController::class, 'update']);
 $router->post('/panier/vider', [CartController::class, 'empty']);
 
+// Checkout (sends the order to WhatsApp, no payment on the site)
 $router->get('/commande', [CartController::class, 'checkout']);
 $router->post('/commande', [CartController::class, 'placeOrder']);
 
-// Admin area. The prefix comes from ADMIN_PATH ("gestion" by default).
+// Admin area. The folder name comes from 'admin_path' in config.php.
 $adminPath = '/' . trim((string) config('admin_path'), '/');
 
 $router->get($adminPath . '/connexion', [AdminController::class, 'loginForm']);
@@ -64,4 +73,5 @@ $router->post($adminPath . '/categories/{id}/supprimer', [AdminController::class
 $router->get($adminPath . '/reglages', [AdminController::class, 'settings']);
 $router->post($adminPath . '/reglages', [AdminController::class, 'saveSettings']);
 
+// Anything else -> 404 page.
 $router->notFound([ErrorController::class, 'notFound']);

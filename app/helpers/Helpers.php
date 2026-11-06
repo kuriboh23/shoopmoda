@@ -17,30 +17,19 @@ use App\Models\Setting;
 final class Helpers
 {
     /**
-     * Build an absolute URL for a path.
+     * Link to a page of the site (root-relative, see url()).
      */
     public static function url(string $path = ''): string
     {
-        $base = rtrim(self::baseUrl(), '/');
-
-        return $base . '/' . ltrim($path, '/');
+        return \url($path);
     }
 
     /**
-     * Base URL from APP_URL; fall back to current scheme + host.
+     * Absolute base URL, built from the current request.
      */
     public static function baseUrl(): string
     {
-        $appUrl = getenv('APP_URL');
-
-        if ($appUrl !== false && $appUrl !== '') {
-            return $appUrl;
-        }
-
-        $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-        $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
-
-        return "{$scheme}://{$host}";
+        return \abs_url('');
     }
 
     /**
@@ -108,11 +97,11 @@ final class Helpers
     }
 
     /**
-     * Asset path relative to the public root.
+     * Asset path relative to the site root.
      */
     public static function assetUrl(string $path): string
     {
-        return rtrim(self::baseUrl(), '/') . '/' . ltrim($path, '/');
+        return \url($path);
     }
 
     /**

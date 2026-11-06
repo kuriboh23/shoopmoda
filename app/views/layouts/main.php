@@ -21,7 +21,12 @@ $pageTitle   = $title ?? $siteName;
 
 
 $pageDesc    = $description ?? 'Mode turque femme et enfant au Maroc. Commandez facilement via WhatsApp.';
-$canonicalUrl = $canonical ?? url(current_path());
+// Canonical / Open Graph URLs must include the domain; url() is root-relative.
+$canonicalUrl = $canonical ?? current_path();
+
+if (preg_match('#^https?://#i', (string) $canonicalUrl) !== 1) {
+    $canonicalUrl = abs_url((string) $canonicalUrl);
+}
 $cartCount   = $cartCount ?? 0;
 $wishCount   = $wishCount ?? 0;
 

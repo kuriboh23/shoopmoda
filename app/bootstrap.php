@@ -2,29 +2,32 @@
 
 declare(strict_types=1);
 
-use App\Core\Env;
 use App\Core\Router;
 use App\Core\View;
 
 /**
- * Application bootstrap.
+ * Application bootstrap: paths, autoloader, helpers, configuration, error
+ * handling and security headers.
  *
- * Returns the configured Router so index.php only has to dispatch.
+ * Returns the Router, so index.php only has to dispatch.
+ *
+ * Nothing in this file needs to change to host the shop. Every setting the
+ * owner may want to edit lives in config.php at the project root.
  */
 
 define('ROOT_PATH', dirname(__DIR__));
 define('APP_PATH', ROOT_PATH . '/app');
-// index.php, assets/, uploads/ et favicon.svg sont à la racine du projet
-// (déploiement direct dans htdocs / public_html).
+// index.php, assets/, uploads/ and config.php sit next to each other, so the
+// public root is the project root: upload the folder straight into htdocs/.
 define('PUBLIC_PATH', ROOT_PATH);
 define('STORAGE_PATH', ROOT_PATH . '/storage');
 
 /**
  * Autoloader for the App\ namespace.
  *
- * Directory names are lowercase on disk (app/core, app/controllers, …)
- * while class names are StudlyCase, so we lowercase only the folders.
- * This keeps the project portable to case-sensitive Linux hosting.
+ * Folders on disk are lowercase (app/core, app/controllers, ...) while class
+ * names are StudlyCase, so only the folders are lowercased. This keeps the
+ * project portable to case-sensitive Linux hosting.
  */
 spl_autoload_register(static function (string $class): void {
     $prefix = 'App\\';
@@ -33,8 +36,8 @@ spl_autoload_register(static function (string $class): void {
         return;
     }
 
-    $segments = explode('\\', substr($class, strlen($prefix)));
-    $file     = array_pop($segments);
+    $segments  = explode('\\', substr($class, strlen($prefix)));
+    $file      = array_pop($segments);
     $directory = implode('/', array_map('strtolower', $segments));
 
     $path = APP_PATH . '/' . ($directory !== '' ? $directory . '/' : '') . $file . '.php';
@@ -44,23 +47,21 @@ spl_autoload_register(static function (string $class): void {
     }
 });
 
-// Explicit helpers first because some are used during bootstrapping and before
-// the first controller is instantiated.
+// Global template helpers (e(), url(), config(), csrf_*, ...). They are plain
+// functions, which the autoloader cannot load, so they come first.
 require APP_PATH . '/helpers/functions.php';
-require APP_PATH . '/helpers/helpers.php';
-require APP_PATH . '/helpers/Icons.php';
+require APP_PATH . '/helpers/Helpers.php';
+require APP_PATH . '/helpers/icons.php';
 require APP_PATH . '/helpers/Products.php';
 
-// Explicit models next: controllers reference these by full class name before
-// the autoloader has run for them on the first request.
+// Models are loaded explicitly as well: the first controller may use them
+// before any autoload has happened.
 require APP_PATH . '/models/Setting.php';
 require APP_PATH . '/models/Cart.php';
 require APP_PATH . '/models/Product.php';
 require APP_PATH . '/models/Category.php';
 
-Env::load(ROOT_PATH . '/.env');
-
-$debug = Env::bool('APP_DEBUG', false);
+$debug = (bool) config('app_debug', false);
 
 error_reporting(E_ALL);
 ini_set('display_errors', $debug ? '1' : '0');
@@ -68,12 +69,14 @@ ini_set('log_errors', '1');
 ini_set('default_charset', 'UTF-8');
 ini_set('session.use_strict_mode', '1');
 
-date_default_timezone_set('Africa/Casablanca');
+date_default_timezone_set((string) config('timezone', 'Africa/Casablanca'));
 mb_internal_encoding('UTF-8');
 
 // Runtime folders must exist even on a fresh upload.
 foreach ([STORAGE_PATH . '/cache', STORAGE_PATH . '/logs'] as $directory) {
     if (!is_dir($directory)) {
+        // Some shared hosts block folder creation. The shop still runs; it
+        // only loses the file cache and the log file.
         @mkdir($directory, 0775, true);
     }
 }
@@ -99,7 +102,7 @@ $logException = static function (Throwable $exception) use ($debug): void {
     );
 };
 
-// In development every warning becomes an exception (bugs are never silent).
+// In development every warning becomes an exception, so bugs are never silent.
 // In production warnings are logged and the page keeps working.
 set_error_handler(static function (int $severity, string $message, string $file, int $line) use ($debug): bool {
     if ((error_reporting() & $severity) === 0) {
@@ -144,7 +147,7 @@ set_exception_handler(static function (Throwable $exception) use ($logException,
     }
 });
 
-// Security headers. Apache also sets these in .htaccess for static files.
+// Security headers. Apache also sets the important ones for static files.
 $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
     || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
 
@@ -175,8 +178,9 @@ $router = new Router();
 
 require APP_PATH . '/routes.php';
 
-// Controllers live under app/controllers/ and follow PSR-4 via the autoloader
-// above. They are only mentioned here when a route callback references them.
+// Controllers live in app/controllers/ and follow the autoloader above. They
+// are required here so the very first request never depends on autoload
+// order on unusual hosting setups.
 require APP_PATH . '/controllers/HomeController.php';
 require APP_PATH . '/controllers/ProductController.php';
 require APP_PATH . '/controllers/CartController.php';

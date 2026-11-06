@@ -9,9 +9,8 @@ use App\Core\Database;
 /**
  * Thin key/value settings reader.
  *
- * Settings can live in app/config/app.php for static content and in the
- * `settings` database table for runtime values the owner may change without
- * a deploy.
+ * Static content lives in config.php; runtime values the owner changes from
+ * the admin area live in the `settings` database table, which wins.
  */
 final class Setting
 {
@@ -37,7 +36,11 @@ final class Setting
             return self::$cache;
         }
 
-        $rows = Database::select('SELECT setting_key, setting_value FROM settings');
+        try {
+            $rows = Database::select('SELECT setting_key, setting_value FROM settings');
+        } catch (\Throwable) {
+            return [];
+        }
 
         self::$cache = [];
         foreach ($rows as $row) {

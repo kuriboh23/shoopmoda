@@ -5,19 +5,27 @@ declare(strict_types=1);
 namespace App\Core;
 
 /**
- * Tiny regex router.
+ * The smallest router this shop needs.
  *
- * Routes are declared in app/routes.php with `{name}` placeholders, e.g.
- *   $router->get('/produit/{slug}', [ProductController::class, 'show']);
- * The placeholder value is passed to the controller as a string argument.
+ * Routes are declared in app/routes.php:
+ *
+ *     $router->get('/produit/{slug}', [ProductController::class, 'product']);
+ *
+ * A {name} segment matches any single value and is passed to the controller
+ * method as a string argument, in the order it appears in the path.
+ *
+ * Paths are compared WITHOUT the folder the site is installed in: if the
+ * shop runs at https://example.com/shop/, the request /shop/produit/robe is
+ * matched against /produit/robe. This is why the same files work at the
+ * domain root (htdocs/) and inside a sub-folder (htdocs/shop/) with no
+ * configuration at all.
  */
 final class Router
 {
-    /** @var array<int, array{method: string, regex: string, names: array<int, string>, handler: array|callable}> */
+    /**
+     * @var array<int, array{method: string, segments: array<int, string>, handler: array|callable}>
+     */
     private array $routes = [];
-
-    /** @var array<int, array{method: string, regex: string, names: array<int, string>, handler: array|callable}> */
-    private array $compiled = [];
 
     /** @var array|callable|null */
     private $notFoundHandler = null;
@@ -32,145 +40,148 @@ final class Router
         $this->add('POST', $path, $handler);
     }
 
-    public function any(string $path, array|callable $handler): void
-    {
-        $this->add('GET', $path, $handler);
-        $this->add('POST', $path, $handler);
-    }
-
-    public function notFound(array|callable $handler, bool $return404 = true): void
+    public function notFound(array|callable $handler): void
     {
         $this->notFoundHandler = $handler;
     }
 
     private function add(string $method, string $path, array|callable $handler): void
     {
-        [$regex, $names] = self::compile($path);
-
-        $route = [
-            'method'  => $method,
-            'regex'   => $regex,
-            'names'   => $names,
-            'handler' => $handler,
+        $this->routes[] = [
+            'method'   => $method,
+            'segments' => self::segments($path),
+            'handler'  => $handler,
         ];
-
-        $this->routes[] = $route;
-        $this->compiled[] = $route;
     }
 
     /**
-     * Turn "/produit/{slug}" into a regex plus the ordered placeholder names.
-     *
-     * @return array{0: string, 1: array<int, string>}
+     * Path of the current request, without the query string and without the
+     * install folder. "/shop/produit/robe/?x=1" becomes "/produit/robe".
      */
-    private static function compile(string $path): array
+    public static function path(): string
     {
-        $path     = '/' . trim($path, '/');
-        $segments = explode('/', $path);
-        $names    = [];
-        $parts    = [];
+        // Normal mode: the page arrives in the query string, as "/?p=/panier".
+        // This is what url() builds when 'pretty_urls' is false, because it
+        // works on every host with no rewrite rule and no .htaccess at all.
+        $target = $_GET['p'] ?? null;
 
-        foreach ($segments as $segment) {
-            if (preg_match('/^\\{([a-zA-Z_][a-zA-Z0-9_]*)\\}$/', $segment, $match) === 1) {
-                $names[] = $match[1];
-                $parts[] = '(?P<' . $match[1] . '>[^/]+)';
-                continue;
-            }
+        if (is_string($target) && $target !== '') {
+            $path = '/' . trim(rawurldecode($target), '/');
 
-            $parts[] = preg_quote($segment, '#');
+            return $path === '/' ? '/' : rtrim($path, '/');
         }
 
-        return ['#^' . implode('/', $parts) . '$#u', $names];
-    }
+        // Clean URLs: the page is in the path, "/produit/robe".
+        $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+        $path = is_string($path) ? rawurldecode($path) : '/';
 
-    /**
-     * Normalized path of any request URI (used by the router and by current_path()).
-     */
-    public static function pathFromUri(string $uri): string
-    {
-        $path = parse_url($uri, PHP_URL_PATH);
+        $base = base_path(); // "" at the domain root, "/shop" inside a folder
 
-        if (!is_string($path) || $path === '') {
-            $path = '/';
+        if ($base !== '' && ($path === $base || str_starts_with($path, $base . '/'))) {
+            $path = substr($path, strlen($base));
         }
 
-        return self::normalize(self::stripBasePath(rawurldecode($path)));
-    }
-
-    public function dispatch(string $method, string $uri): void
-    {
-        $path = self::pathFromUri($uri);
-
-        foreach ($this->routes as $route) {
-            if ($route['method'] !== $method) {
-                continue;
-            }
-
-            if (preg_match($route['regex'], $path, $matches) !== 1) {
-                continue;
-            }
-
-            $args = [];
-
-            foreach ($route['names'] as $name) {
-                $args[] = $matches[$name] ?? '';
-            }
-
-            self::invoke($route['handler'], $args);
-
-            return;
+        // "/index.php" and "/index.php/produits" mean the home page and
+        // "/produits": the file name is never part of a page address.
+        if (str_ends_with($path, '/index.php')) {
+            $path = substr($path, 0, -strlen('/index.php')) . '/';
         }
 
-        $this->handleNotFound();
-    }
-
-    private static function normalize(string $path): string
-    {
         $path = '/' . trim($path, '/');
 
         return $path === '/' ? '/' : rtrim($path, '/');
     }
 
     /**
-     * Support installation in a sub-directory (e.g. /shoopmoda/public).
+     * Find the route matching the current request and call it.
      */
-    private static function stripBasePath(string $path): string
+    public function dispatch(): void
     {
-        $script = str_replace('\\\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
-        $base   = rtrim(str_replace('\\\\', '/', dirname($script)), '/');
+        $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+        $path   = self::path();
 
-        if ($base === '' || $base === '.') {
-            return $path;
-        }
+        foreach ($this->routes as $route) {
+            if ($route['method'] !== $method) {
+                continue;
+            }
 
-        if (str_starts_with($path, $base)) {
-            $path = substr($path, strlen($base));
-        }
+            $arguments = self::match($route['segments'], $path);
 
-        return $path === '' ? '/' : $path;
-    }
+            if ($arguments === null) {
+                continue;
+            }
 
-    /**
-     * @param array|callable $handler
-     * @param array<int, string> $args
-     */
-    private static function invoke(array|callable $handler, array $args): void
-    {
-        if (is_array($handler)) {
-            [$class, $method] = $handler;
-            $controller = new $class();
-            $controller->{$method}(...$args);
+            self::run($route['handler'], $arguments);
 
             return;
         }
 
-        $handler(...$args);
+        $this->runNotFound();
     }
 
-    private function handleNotFound(): void
+    /**
+     * Compare one route with one path, segment by segment.
+     *
+     * @param array<int, string> $route
+     * @return array<int, string>|null Arguments, or null when it does not match.
+     */
+    private static function match(array $route, string $path): ?array
+    {
+        $path = trim($path, '/');
+        $given = $path === '' ? [] : explode('/', $path);
+
+        if (count($given) !== count($route)) {
+            return null;
+        }
+
+        $arguments = [];
+
+        foreach ($route as $index => $segment) {
+            if (preg_match('/^\{[a-zA-Z_][a-zA-Z0-9_]*\}$/', $segment) === 1) {
+                $arguments[] = $given[$index];
+
+                continue;
+            }
+
+            if ($segment !== $given[$index]) {
+                return null;
+            }
+        }
+
+        return $arguments;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private static function segments(string $path): array
+    {
+        $path = trim($path, '/');
+
+        return $path === '' ? [] : explode('/', $path);
+    }
+
+    /**
+     * @param array|callable $handler
+     * @param array<int, string> $arguments
+     */
+    private static function run(array|callable $handler, array $arguments): void
+    {
+        if (is_array($handler)) {
+            [$class, $method] = $handler;
+
+            (new $class())->{$method}(...$arguments);
+
+            return;
+        }
+
+        $handler(...$arguments);
+    }
+
+    private function runNotFound(): void
     {
         if ($this->notFoundHandler !== null) {
-            self::invoke($this->notFoundHandler, []);
+            self::run($this->notFoundHandler, []);
 
             return;
         }
@@ -178,22 +189,5 @@ final class Router
         http_response_code(404);
         header('Content-Type: text/plain; charset=utf-8');
         echo '404 - Page introuvable';
-    }
-
-    /**
-     * @return array<int, array{method: string, handler: array|callable}>
-     */
-    public function all(): array
-    {
-        $out = [];
-
-        foreach ($this->compiled as $route) {
-            $out[] = [
-                'method'  => $route['method'],
-                'handler' => $route['handler'],
-            ];
-        }
-
-        return $out;
     }
 }

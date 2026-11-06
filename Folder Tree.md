@@ -69,8 +69,7 @@ shoopmoda/
 │   ├── cache/
 │   └── logs/
 │
-├── vendor/                          # If you use Composer later (optional)
-├── .env                             # DB credentials (never commit)
+├── config.php                       # ⚙️ ALL settings (shop + database)
 ├── .gitignore
 ├── composer.json                    # Optional
 └── README.md

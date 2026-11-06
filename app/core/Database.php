@@ -13,10 +13,70 @@ use PDOException;
  * - Prepared statements only (emulation disabled).
  * - Exceptions on error, associative fetch by default.
  * - No persistent connections: shared hosting kills them abruptly.
+ *
+ * The MySQL host is used EXACTLY as configured in config.php. Shared hosts
+ * (InfinityFree and others) expose the database on a domain name such as
+ * sql123.infinityfree.com: rewriting it to 127.0.0.1 breaks the connection.
  */
 final class Database
 {
     private static ?PDO $connection = null;
+
+    /**
+     * MySQL DSN built from config.php (also displayed by check.php).
+     */
+    public static function dsn(): string
+    {
+        [$host, $port] = self::endpoint();
+
+        $charset = trim((string) config('db_charset'));
+
+        if ($charset === '') {
+            $charset = 'utf8mb4';
+        }
+
+        return sprintf(
+            'mysql:host=%s;port=%d;dbname=%s;charset=%s',
+            $host,
+            $port,
+            (string) config('db_name'),
+            $charset
+        );
+    }
+
+    /**
+     * Host and port, straight from the configuration.
+     *
+     * Accepts a domain name, an IPv4 address or a "host:port" value copied
+     * from the hosting panel. No lookup, no substitution.
+     *
+     * @return array{0: string, 1: int}
+     */
+    private static function endpoint(): array
+    {
+        $host = trim((string) config('db_host'), " \t\n\r\0\x0B\"'");
+        $port = (int) config('db_port');
+
+        // "sql123.infinityfree.com:3306" pasted into db_host.
+        if ($host !== '' && $host[0] !== '[' && substr_count($host, ':') === 1) {
+            [$hostPart, $portPart] = explode(':', $host, 2);
+
+            if ($portPart !== '' && preg_match('/^\d+$/', $portPart) === 1) {
+                $host = $hostPart;
+                $port = (int) $portPart;
+            }
+        }
+
+        if ($host === '') {
+            $host = '127.0.0.1';
+        }
+
+        if ($port < 1 || $port > 65535) {
+            $port = 3306;
+        }
+
+        return [$host, $port];
+    }
 
     public static function pdo(): PDO
     {
@@ -24,17 +84,9 @@ final class Database
             return self::$connection;
         }
 
-        $dsn = sprintf(
-            'mysql:host=%s;port=%d;dbname=%s;charset=%s',
-            (string) config('db_host'),
-            (int) config('db_port'),
-            (string) config('db_name'),
-            (string) config('db_charset')
-        );
-
         try {
             self::$connection = new PDO(
-                $dsn,
+                self::dsn(),
                 (string) config('db_user'),
                 (string) config('db_pass'),
                 [
@@ -98,4 +150,5 @@ final class Database
 
         return $statement->rowCount();
     }
+
 }

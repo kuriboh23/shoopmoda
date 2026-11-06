@@ -61,6 +61,7 @@ $catalogUrl = static function (array $overrides = []) use ($query, $activeCatego
             </a>
 
             <form class="catalog-sort" action="<?= e(url('/produits')) ?>" method="GET">
+                <?= route_field('/produits') ?>
                 <?php if ($query !== ''): ?>
                     <input type="hidden" name="q" value="<?= e($query) ?>">
                 <?php endif; ?>

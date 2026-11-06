@@ -1,71 +1,29 @@
-# ------------------------------------------------------------------
-# Shoop Moda Style — racine du site
-# Le dossier `shoopmoda` peut être déposé tel quel dans htdocs /
-# public_html : index.php est à la racine (demande du client).
-# Le code applicatif (app/, storage/, tools/) est bloqué ci-dessous.
-# ------------------------------------------------------------------
-
-Options -Indexes
-DirectoryIndex index.php
+# ==========================================================================
+#  Pretty URLs: /produits instead of /?p=/produits
+# ==========================================================================
+#
+#  This file is optional. If it is missing, the shop still works: links
+#  simply become /?p=/produits (see pretty_urls() in app/helpers/functions.php).
+#
+#  It only contains rewrite rules. There is no "Options", no "Require" and
+#  no "ExpiresByType" here on purpose: those are the directives that free
+#  hosts refuse, and the reason a site can answer 500 while this file exists.
+#
+#  Works at the domain root (htdocs/) and inside a folder (htdocs/shop/).
+#  Nothing to change when you move the site.
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # HTTPS (décommenter en production, après installation du certificat)
-    # RewriteCond %{HTTPS} off
-    # RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+    # Never serve the code, the logs, the SQL dump or this file itself.
+    RewriteRule ^(app|storage|database|tools)(/|$) - [F]
+    RewriteRule ^config\.php$ - [F]
+    RewriteRule ^\.ht - [F]
 
-    # Jamais d'accès direct au code, aux logs, au cache ou aux outils
-    RewriteRule ^(app|storage|tools|vendor|database)(/|$) - [F,L]
+    # Real files (css, js, images, uploads) and real folders are served as-is.
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
 
-    # Fichiers et dossiers réels (assets, uploads, favicon) servis tels quels
-    RewriteCond %{REQUEST_FILENAME} -f [OR]
-    RewriteCond %{REQUEST_FILENAME} -d
-    RewriteRule ^ - [L]
-
-    # Front controller
+    # Everything else goes to the front controller, which reads the URL.
     RewriteRule ^ index.php [L]
-</IfModule>
-
-# Fichiers sensibles
-<FilesMatch "(^\.|\.(env|md|sql|ini|log|lock|bak|old|sh)$)">
-    <IfModule mod_authz_core.c>
-        Require all denied
-    </IfModule>
-    <IfModule !mod_authz_core.c>
-        Order allow,deny
-        Deny from all
-    </IfModule>
-</FilesMatch>
-
-# En-têtes : les pages dynamiques sont couvertes par PHP (bootstrap).
-<IfModule mod_headers.c>
-    Header unset X-Powered-By
-    Header always unset X-Powered-By
-</IfModule>
-
-# Cache navigateur
-<IfModule mod_expires.c>
-    ExpiresActive On
-    ExpiresByType text/css "access plus 1 year"
-    ExpiresByType application/javascript "access plus 1 year"
-    ExpiresByType text/javascript "access plus 1 year"
-    ExpiresByType image/webp "access plus 1 year"
-    ExpiresByType image/jpeg "access plus 1 year"
-    ExpiresByType image/png "access plus 1 year"
-    ExpiresByType image/svg+xml "access plus 1 year"
-    ExpiresByType font/woff2 "access plus 1 year"
-    ExpiresByType text/html "access plus 0 seconds"
-</IfModule>
-
-# Compression
-<IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/html text/plain text/css
-    AddOutputFilterByType DEFLATE application/javascript text/javascript application/json
-    AddOutputFilterByType DEFLATE image/svg+xml
-</IfModule>
-
-<IfModule mod_mime.c>
-    AddType image/webp .webp
-    AddType font/woff2 .woff2
 </IfModule>

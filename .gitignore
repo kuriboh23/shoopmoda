@@ -1,4 +1,4 @@
-# Secrets et configuration locale
+# Secrets locaux
 /.env
 /tools/php.ini
 /.devdb/

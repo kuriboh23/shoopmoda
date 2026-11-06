@@ -40,6 +40,7 @@ $shownQuery   = $suggested ?? $query;
             role="search"
             data-suggest-url="<?= e(url('/recherche/suggestions')) ?>"
         >
+            <?= route_field('/produits') ?>
             <span class="search-box-icon"><?= icon('search', 'icon') ?></span>
 
             <label class="visually-hidden" for="siteSearchInput">Rechercher une pièce</label>

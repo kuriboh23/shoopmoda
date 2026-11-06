@@ -835,7 +835,10 @@
                 options.signal = controller.signal;
             }
 
-            window.fetch(suggestUrl + '?q=' + encodeURIComponent(query), options)
+            // suggestUrl may already contain a query string ("?p=/recherche").
+            var separator = suggestUrl.indexOf('?') === -1 ? '?' : '&';
+
+            window.fetch(suggestUrl + separator + 'q=' + encodeURIComponent(query), options)
                 .then(function (response) {
                     return response.json();
                 })

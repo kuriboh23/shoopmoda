@@ -14,11 +14,29 @@ final class Session
     public static function start(): void
     {
         if (session_status() === PHP_SESSION_NONE) {
-            @session_start([
+            $cookieSecure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+                || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+
+            $options = [
                 'cookie_httponly' => true,
-                'cookie_secure'   => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
+                'cookie_secure'   => $cookieSecure,
                 'cookie_samesite' => 'Lax',
-            ]);
+            ];
+
+            try {
+                session_start($options);
+            } catch (\Throwable $exception) {
+                // Some shared hosts disable session configuration or block
+                // custom session handlers. Fall back to the default handler.
+                @ini_set('session.use_strict_mode', '0');
+
+                try {
+                    session_start();
+                } catch (\Throwable) {
+                    // If sessions are not available at all, the app still
+                    // works; it just loses the cart / wishlist / admin session.
+                }
+            }
         }
     }
 

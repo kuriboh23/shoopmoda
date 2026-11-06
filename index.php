@@ -3,17 +3,18 @@
 declare(strict_types=1);
 
 /**
- * Front controller — point d'entrée unique du site.
+ * Shoop Moda Style - single entry point.
  *
- * Placé à la racine du projet (et non dans /public) pour un déploiement
- * direct dans htdocs / public_html. Le code applicatif est protégé par
- * le .htaccess de ce même dossier.
+ * Every request ends up here and is matched against the routes in
+ * app/routes.php. The page normally arrives in the URL (/panier), thanks to
+ * the rewrite rules of .htaccess; without that file the same page still
+ * works as /?p=/panier, so the shop never depends on the server setup.
+ *
+ * This file must stay at the root of the site: index.php, .htaccess, assets/,
+ * uploads/ and config.php sit side by side in htdocs/ (or public_html/). No
+ * .env, no database install, nothing else to configure on the server.
  */
 
-/** @var \App\Core\Router $router */
 $router = require __DIR__ . '/app/bootstrap.php';
 
-$router->dispatch(
-    (string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'),
-    (string) ($_SERVER['REQUEST_URI'] ?? '/')
-);
+$router->dispatch();

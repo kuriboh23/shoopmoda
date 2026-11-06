@@ -13,6 +13,7 @@ $count = count($products);
 ?>
 <div class="admin-toolbar">
     <form class="admin-search" method="GET" action="<?= e(admin_url('produits')) ?>" role="search">
+        <?= route_field((string) config('admin_path') . '/produits') ?>
         <span class="admin-search-icon"><?= icon('search', 'icon icon--sm') ?></span>
         <label class="visually-hidden" for="adminProductSearch">Rechercher un produit</label>
         <input
