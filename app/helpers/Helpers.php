@@ -152,10 +152,13 @@ final class Helpers
      */
     public static function whatsappUrl(string $message = ''): string
     {
-        $phone = Setting::get('whatsapp_number', '212725605520');
-        $text  = rawurlencode($message);
+        $phone = preg_replace('/[^0-9]/', '', \whatsapp_number()) ?? '';
 
-        return 'https://wa.me/' . preg_replace('/[^0-9]/', '', (string) $phone) . '?text=' . $text;
+        if ($message === '') {
+            return 'https://wa.me/' . $phone;
+        }
+
+        return 'https://wa.me/' . $phone . '?text=' . rawurlencode($message);
     }
 
     /**

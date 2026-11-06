@@ -102,6 +102,7 @@ $categoryUrl = !empty($product['category_slug']) ? url('/categorie/' . $product[
                 class="cart-form"
                 action="<?= e(url('/panier/ajouter')) ?>"
                 method="POST"
+                data-checkout-url="<?= e(url('/commande')) ?>"
             >
                 <input type="hidden" name="slug" value="<?= e($product['slug']) ?>">
                 <input type="hidden" name="size" id="selectedSize" value="<?= e($sizes[0] ?? '') ?>">
@@ -177,15 +178,19 @@ $categoryUrl = !empty($product['category_slug']) ? url('/categorie/' . $product[
                 <div class="trust-item"><?= icon('refresh', 'icon icon--sm') ?><span>Échange sous 7 jours</span></div>
             </div>
 
-            <a
+            <?php /* Adds the piece to the cart and goes straight to the details form. */ ?>
+            <button
+                type="submit"
+                form="cartForm"
+                name="after"
+                value="checkout"
                 class="btn btn--ghost btn--block product-wa"
-                href="<?= e(whatsapp_url('Bonjour, je souhaite commander : ' . $product['title'] . ' — ' . format_price($price))) ?>"
-                target="_blank"
-                rel="noopener"
+                <?= $hasStock ? '' : 'disabled' ?>
             >
                 <?= icon('whatsapp', 'icon icon--sm') ?>
                 Commander par WhatsApp
-            </a>
+            </button>
+            <p class="product-wa-note">Vos coordonnées de livraison sont demandées avant l’envoi de la commande.</p>
 
             <div class="cart-actions">
                 <div class="qty-selector">

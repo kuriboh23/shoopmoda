@@ -66,7 +66,7 @@ declare(strict_types=1);
                 <span class="footer-wa-label">Commandez directement via WhatsApp :</span>
                 <a class="footer-wa-btn" href="<?= e(whatsapp_url()) ?>" target="_blank" rel="noopener">
                     <?= icon('whatsapp', 'icon icon--sm') ?>
-                    07 25 60 55 20
+                    <?= e(whatsapp_display()) ?>
                 </a>
                 <div class="footer-pills">
                     <span class="pill">Tout le Maroc</span>

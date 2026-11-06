@@ -256,7 +256,9 @@ function whatsapp_url(string $message = '', bool $preserveFormatting = false): s
     static $number = null;
 
     if ($number === null) {
-        $number = preg_replace('/\D+/', '', (string) config('whatsapp_number'));
+        // The number saved in the admin area wins over config.php, so changing
+        // it once updates every WhatsApp link of the shop.
+        $number = whatsapp_number();
     }
 
     if ($message !== '') {
@@ -270,6 +272,35 @@ function whatsapp_url(string $message = '', bool $preserveFormatting = false): s
     }
 
     return 'https://wa.me/' . $number . ($message !== '' ? '?text=' . $message : '');
+}
+
+/**
+ * WhatsApp number in international format, digits only (212XXXXXXXXX).
+ */
+function whatsapp_number(): string
+{
+    $raw = setting('whatsapp_number') ?? config('whatsapp_number');
+
+    return preg_replace('/\D+/', '', (string) $raw) ?? '';
+}
+
+/**
+ * Same number written the way the owner reads it (212725605520 -> 07 25 60 55 20).
+ */
+function whatsapp_display(): string
+{
+    $digits = whatsapp_number();
+
+    if ($digits === '') {
+        return '';
+    }
+
+    // Moroccan numbers: 212 + 9 digits, displayed locally with a leading 0.
+    $local = str_starts_with($digits, '212') && strlen($digits) === 12
+        ? '0' . substr($digits, 3)
+        : $digits;
+
+    return trim((string) chunk_split($local, 2, ' '));
 }
 
 /**

@@ -1306,9 +1306,32 @@ body.drawer-open {
 
 /* ---------- 12. Responsive --------------------------------------- */
 @media (max-width: 379px) {
-    /* Keep the header breathable on 320px screens */
-    .brand-text {
-        display: none;
+    /* Le logo reste visible sur les petits écrans : il rétrécit, il ne disparaît pas. */
+    .site-header {
+        gap: 6px;
+        padding-inline: 12px;
+    }
+
+    .brand {
+        flex-shrink: 1;
+    }
+
+    .brand-wordmark {
+        font-size: 14px;
+        letter-spacing: 0.06em;
+    }
+
+    .brand-second {
+        margin-left: 0.24em;
+    }
+
+    .header-actions {
+        gap: 4px;
+    }
+
+    .icon-btn {
+        width: 40px;
+        height: 40px;
     }
 }
 
@@ -3215,6 +3238,14 @@ body.drawer-open {
 
 .product-wa {
     margin-top: -4px;
+}
+
+.product-wa-note {
+    margin-top: -2px;
+    color: var(--gray);
+    font-size: 11px;
+    line-height: 1.4;
+    text-align: center;
 }
 
 /* Related products (compact) ------------------------------------ */

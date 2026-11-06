@@ -566,12 +566,17 @@
         cartForm.addEventListener('submit', function (event) {
             event.preventDefault();
 
-            var button = document.querySelector('.cart-actions .btn--add-cart');
+            var button = event.submitter || document.querySelector('.cart-actions .btn--add-cart');
             var payload = {};
 
             new FormData(cartForm).forEach(function (value, key) {
                 payload[key] = value;
             });
+
+            // "Commander par WhatsApp" asks for the delivery details first.
+            if (event.submitter && event.submitter.name) {
+                payload[event.submitter.name] = event.submitter.value;
+            }
 
             var quantity = document.querySelector('.cart-actions .qty-input');
 
@@ -586,6 +591,13 @@
             postJson(cartForm.action, payload).then(function (data) {
                 if (!data || data.ok !== true) {
                     showToast((data && data.error) || 'Ajout impossible, réessayez.');
+                    return;
+                }
+
+                if (payload.after === 'checkout') {
+                    window.location.href = data.redirect
+                        || cartForm.getAttribute('data-checkout-url')
+                        || '/commande';
                     return;
                 }
 

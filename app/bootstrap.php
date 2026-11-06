@@ -163,7 +163,11 @@ if (!headers_sent()) {
         . "script-src 'self'; "
         . "font-src 'self'; "
         . "connect-src 'self'; "
-        . "form-action 'self'; "
+        // Chrome and Safari apply form-action to the redirect that follows a
+        // form POST. The checkout ends on WhatsApp, so those hosts are part
+        // of the allowlist; otherwise the browser silently drops the redirect
+        // after the order has already cleared the cart.
+        . "form-action 'self' https://wa.me https://api.whatsapp.com https://web.whatsapp.com whatsapp:; "
         . "base-uri 'self'; "
         . "object-src 'none'; "
         . "frame-ancestors 'none'"

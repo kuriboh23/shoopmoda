@@ -64,11 +64,16 @@ final class CartController
             '_img'     => $product['primary_image'] ?? null,
         ]);
 
+        // The product page button asks for the delivery details before the
+        // WhatsApp hand-off, so it adds the piece and goes to checkout.
+        $toCheckout = (string) ($payload['after'] ?? '') === 'checkout';
+
         $this->respond([
             'ok'        => true,
             'cartCount' => Cart::count(),
             'message'   => 'Produit ajouté au panier',
-        ], 200, '/panier');
+            'redirect'  => $toCheckout ? url('/commande') : null,
+        ], 200, $toCheckout ? '/commande' : '/panier');
     }
 
     public function remove(): void
@@ -236,20 +241,20 @@ final class CartController
     private function orderMessage(array $customer, array $items, float $subtotal, float $delivery): string
     {
         $lines   = [];
-        $lines[] = 'Nouvelle commande — ' . config('app_name');
+        $lines[] = '🛍️ *Nouvelle commande* — ' . config('app_name');
         $lines[] = '';
-        $lines[] = 'CLIENT';
-        $lines[] = 'Nom : ' . $customer['name'];
-        $lines[] = 'Téléphone : ' . $customer['phone'];
-        $lines[] = 'Ville : ' . $customer['city'];
-        $lines[] = 'Adresse : ' . $customer['address'];
+        $lines[] = '*👤 Client*';
+        $lines[] = '• Nom : ' . $customer['name'];
+        $lines[] = '• Téléphone : ' . $customer['phone'];
+        $lines[] = '• Ville : ' . $customer['city'];
+        $lines[] = '• Adresse : ' . $customer['address'];
 
         if ($customer['note'] !== '') {
-            $lines[] = 'Note : ' . $customer['note'];
+            $lines[] = '• Note : ' . $customer['note'];
         }
 
         $lines[] = '';
-        $lines[] = 'ARTICLES';
+        $lines[] = '*📦 Articles*';
 
         $index = 1;
 
@@ -257,25 +262,28 @@ final class CartController
             $variant = [];
 
             if (!empty($item['size'])) {
-                $variant[] = 'Taille ' . $item['size'];
+                $variant[] = 'taille ' . $item['size'];
             }
 
             if (!empty($item['color'])) {
-                $variant[] = 'Couleur ' . $item['color'];
+                $variant[] = 'couleur ' . $item['color'];
             }
 
             $lines[] = $index . '. ' . $item['name']
                 . ($variant !== [] ? ' (' . implode(', ', $variant) . ')' : '')
-                . ' × ' . (int) ($item['quantity'] ?? 1)
-                . ' — ' . format_price((float) $item['price'] * (int) ($item['quantity'] ?? 1));
+                . ' — ×' . (int) ($item['quantity'] ?? 1)
+                . ' : ' . format_price((float) $item['price'] * (int) ($item['quantity'] ?? 1));
 
             $index++;
         }
 
         $lines[] = '';
+        $lines[] = '*💰 Total*';
         $lines[] = 'Sous-total : ' . format_price($subtotal);
-        $lines[] = 'Livraison : ' . ($delivery > 0 ? format_price($delivery) : 'Gratuite');
-        $lines[] = 'TOTAL : ' . format_price($subtotal + $delivery);
+        $lines[] = 'Livraison : ' . ($delivery > 0 ? format_price($delivery) : 'Offerte');
+        $lines[] = '*À payer à la livraison : ' . format_price($subtotal + $delivery) . '*';
+        $lines[] = '';
+        $lines[] = 'Merci de confirmer la commande. 🙏';
 
         return implode("\n", $lines);
     }
