@@ -6,6 +6,9 @@ namespace App\Controllers;
 
 use App\Core\Session;
 use App\Core\View;
+use App\Models\Category;
+use App\Models\Product;
+use App\Models\SiteContent;
 use App\Reskin\ThemeStore;
 
 /**
@@ -96,6 +99,7 @@ final class ReskinController
             'noindex'     => true,
             'schema'      => ThemeStore::schema(),
             'values'      => ThemeStore::values(),
+            'content'     => SiteContent::flat(),
             'library'     => ThemeStore::library(),
             'current'     => ThemeStore::currentInfo(),
             'applied'     => ThemeStore::isApplied(),
@@ -124,10 +128,16 @@ final class ReskinController
         $this->allowFraming();
 
         View::render('reskin/preview', [
-            'title'     => 'Aperçu — RESKIN',
-            'values'    => ThemeStore::values(),
-            'bodyAttrs' => ThemeStore::bodyAttributes(),
-            'appName'   => (string) setting('store_name', (string) config('app_name')),
+            'title'         => 'Aperçu — RESKIN',
+            'values'        => ThemeStore::values(),
+            'tokenCss'      => ThemeStore::tokenCss(),
+            'bodyAttrs'     => ThemeStore::bodyAttributes(),
+            'appName'       => store_name(),
+            'content'       => SiteContent::all(),
+            'previewProducts' => $this->previewProducts(),
+            'previewCategories' => $this->previewCategories(),
+            'logo'          => site_logo_url(),
+            'instagram'     => trim((string) \App\Models\Setting::raw('instagram_url', (string) config('instagram_url'))),
         ], 'layouts/preview');
     }
 
@@ -203,12 +213,19 @@ final class ReskinController
                 isset($payload['name']) ? (string) $payload['name'] : null
             );
 
+            $content = $payload['content'] ?? [];
+
+            if (is_array($content) && $content !== []) {
+                SiteContent::applyFlat($content);
+            }
+
             $this->json([
                 'ok'      => true,
                 'values'  => $values,
+                'content' => SiteContent::flat(),
                 'info'    => ThemeStore::currentInfo(),
                 'applied' => ThemeStore::isApplied(),
-                'message' => 'Thème enregistré.',
+                'message' => 'Design et contenu enregistrés.',
             ]);
         } catch (\Throwable $exception) {
             $this->json(['ok' => false, 'error' => $exception->getMessage()], 500);
@@ -226,9 +243,10 @@ final class ReskinController
             $this->json([
                 'ok'      => true,
                 'values'  => $values,
+                'content' => SiteContent::flat(),
                 'info'    => ThemeStore::currentInfo(),
                 'applied' => ThemeStore::isApplied(),
-                'message' => 'Réglages d’origine restaurés.',
+                'message' => 'Design d’origine restauré. Le contenu est conservé.',
             ]);
         } catch (\Throwable $exception) {
             $this->json(['ok' => false, 'error' => $exception->getMessage()], 500);
@@ -339,6 +357,55 @@ final class ReskinController
        Helpers
        ================================================================== */
 
+    /**
+     * Real catalogue products for the preview, with a safe fallback when the
+     * database is not available (fresh install, maintenance).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function previewProducts(): array
+    {
+        try {
+            $products = Product::featured(4);
+        } catch (\Throwable) {
+            $products = [];
+        }
+
+        if ($products === []) {
+            $products = [
+                ['id' => 1, 'title' => 'Robe longue Sultan', 'slug' => '', 'price' => 349, 'sale_price' => 199, 'stock' => 8, 'category_name' => 'Femme', 'is_flash' => 1, 'primary_image' => 'images/placeholders/robe-longue-sultan.svg'],
+                ['id' => 2, 'title' => 'Pyjama satin Istanbul', 'slug' => '', 'price' => 279, 'sale_price' => 219, 'stock' => 5, 'category_name' => 'Pyjamas', 'is_flash' => 0, 'primary_image' => 'images/placeholders/ensemble-pyjama-satin-istanbul.svg'],
+                ['id' => 3, 'title' => 'Trench automne', 'slug' => '', 'price' => 499, 'sale_price' => null, 'stock' => 12, 'category_name' => 'Femme', 'is_flash' => 0, 'primary_image' => 'images/placeholders/trench-automne.svg'],
+                ['id' => 4, 'title' => 'T-shirt coton douceur', 'slug' => '', 'price' => 129, 'sale_price' => 99, 'stock' => 3, 'category_name' => 'Enfants', 'is_flash' => 0, 'primary_image' => 'images/placeholders/t-shirt-coton-douceur.svg'],
+            ];
+        }
+
+        return $products;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function previewCategories(): array
+    {
+        try {
+            $categories = Category::all();
+        } catch (\Throwable) {
+            $categories = [];
+        }
+
+        if ($categories === []) {
+            $categories = [
+                ['name' => 'Femme', 'slug' => 'femme', 'icon' => 'dress'],
+                ['name' => 'Enfants', 'slug' => 'enfants', 'icon' => 'users'],
+                ['name' => 'Pyjamas', 'slug' => 'pyjamas', 'icon' => 'moon'],
+                ['name' => 'Robes', 'slug' => 'robes', 'icon' => 'shirt'],
+            ];
+        }
+
+        return $categories;
+    }
+
     private function isLoggedIn(): bool
     {
         $reskin = Session::get(self::SESSION_KEY);
@@ -377,7 +444,7 @@ final class ReskinController
         $token = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? ($_POST['_csrf'] ?? null);
 
         if (!csrf_verify($token)) {
-            $this->json(['ok' => false, 'error' => 'Session expirée, rechargez la page.'], 419);
+            $this->json(['ok' => false, 'error' => 'Session expirée, rechargez la page.'], 403);
         }
     }
 
@@ -416,7 +483,7 @@ final class ReskinController
                 'saved_at' => (int) $theme['saved_at'],
                 'colors'   => [
                     'primary'    => $theme['values']['primary'] ?? '',
-                    'secondary'  => $theme['values']['secondary'] ?? '',
+                    'accent'     => $theme['values']['accent'] ?? '',
                     'background' => $theme['values']['background'] ?? '',
                 ],
             ];

@@ -5,12 +5,14 @@ declare(strict_types=1);
 /**
  * RESKIN dashboard.
  *
- * Controls are generated from app/reskin/schema.php. Everything the browser
- * needs to drive the preview is carried by data-* attributes, so the layout
- * stays valid under the strict storefront CSP (no inline scripts).
+ * One panel per page section. Panels are generated from app/reskin/schema.php
+ * and contain both style controls (CSS variables/body attributes) and content
+ * fields (saved by SiteContent). Everything the browser needs is carried by
+ * data-* attributes, because the storefront CSP forbids inline scripts.
  *
  * @var array<string, mixed>  $schema
  * @var array<string, string> $values
+ * @var array<string, string> $content
  * @var array<string, array{values: array<string, string>, saved_at: int}> $library
  * @var array{name: string, updated_at: int} $current
  * @var bool   $applied
@@ -30,33 +32,78 @@ declare(strict_types=1);
 
 $categories = (array) ($schema['categories'] ?? []);
 $firstKey   = (string) (array_key_first($categories) ?? '');
-$storeName  = (string) setting('store_name', (string) config('app_name'));
-
-$derivedMap = [];
-
-foreach ($categories as $category) {
-    foreach ($category['controls'] ?? [] as $key => $control) {
-        if (!empty($control['derived'])) {
-            $derivedMap[(string) $key] = $control['derived'];
-        }
-    }
-}
+$storeName  = store_name();
 
 /**
- * Render one control from the schema.
+ * Render one style or content control.
  *
- * @param array<string, mixed> $control
+ * @param array<string, mixed>  $control
  * @param array<string, string> $values
+ * @param array<string, string> $content
  */
-$renderControl = static function (string $key, array $control, array $values): void {
+$renderControl = static function (string $key, array $control, array $values, array $content): void {
     $type    = (string) ($control['type'] ?? '');
     $label   = (string) ($control['label'] ?? $key);
     $help    = (string) ($control['help'] ?? '');
-    $value   = (string) ($values[$key] ?? $control['default'] ?? '');
     $id      = 'rs-' . $key;
-    $var     = (string) ($control['var'] ?? '');
-    $attr    = (string) ($control['attr'] ?? '');
     $unit    = (string) ($control['unit'] ?? '');
+    $isField = isset($control['content']);
+
+    if ($isField) {
+        $path  = (string) $control['content'];
+        $value = (string) ($content[$path] ?? '');
+        $common = 'data-rs-content="' . e($path) . '" data-rs-content-type="' . e($type) . '"';
+        ?>
+        <div class="rs-control" data-rs-control="<?= e($key) ?>">
+            <div class="rs-control-head">
+                <label class="rs-control-label" for="<?= e($id) ?>"><?= e($label) ?></label>
+                <span class="rs-content-badge">Contenu</span>
+            </div>
+
+            <?php if ($type === 'textarea'): ?>
+                <textarea
+                    id="<?= e($id) ?>"
+                    class="rs-textarea"
+                    rows="5"
+                    spellcheck="false"
+                    <?= $common ?>
+                ><?= e($value) ?></textarea>
+            <?php elseif ($type === 'select'): ?>
+                <div class="rs-select-wrap">
+                    <select id="<?= e($id) ?>" class="rs-select" <?= $common ?>>
+                        <?php foreach ((array) ($control['options'] ?? []) as $optionValue => $optionLabel): ?>
+                            <option value="<?= e((string) $optionValue) ?>"<?= (string) $optionValue === $value ? ' selected' : '' ?>>
+                                <?= e((string) $optionLabel) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <?= icon('chevron-right', 'icon icon--sm rs-select-caret') ?>
+                </div>
+            <?php else: ?>
+                <input
+                    type="text"
+                    id="<?= e($id) ?>"
+                    class="rs-input"
+                    value="<?= e($value) ?>"
+                    <?= isset($control['max']) && $type === 'text' ? 'maxlength="' . (int) $control['max'] . '"' : '' ?>
+                    spellcheck="false"
+                    autocomplete="off"
+                    <?= $common ?>
+                >
+            <?php endif; ?>
+
+            <?php if ($help !== ''): ?>
+                <p class="rs-control-help"><?= e($help) ?></p>
+            <?php endif; ?>
+        </div>
+        <?php
+
+        return;
+    }
+
+    $value = (string) ($values[$key] ?? $control['default'] ?? '');
+    $var   = (string) ($control['var'] ?? '');
+    $attr  = (string) ($control['attr'] ?? '');
 
     $common = 'data-rs-input="' . e($key) . '" data-rs-type="' . e($type) . '"';
 
@@ -85,12 +132,7 @@ $renderControl = static function (string $key, array $control, array $values): v
 
         <?php if ($type === 'color'): ?>
             <div class="rs-color-field">
-                <input
-                    type="color"
-                    id="<?= e($id) ?>"
-                    value="<?= e($value) ?>"
-                    <?= $common ?>
-                >
+                <input type="color" id="<?= e($id) ?>" value="<?= e($value) ?>" <?= $common ?>>
                 <input
                     type="text"
                     class="rs-color-hex"
@@ -118,9 +160,7 @@ $renderControl = static function (string $key, array $control, array $values): v
             <div class="rs-select-wrap">
                 <select id="<?= e($id) ?>" class="rs-select" <?= $common ?>>
                     <?php foreach ((array) ($control['options'] ?? []) as $optionValue => $optionLabel): ?>
-                        <?php
-                        $cssValue = (string) (($control['values'][$optionValue] ?? '') ?: '');
-                        ?>
+                        <?php $cssValue = (string) (($control['values'][$optionValue] ?? '') ?: ''); ?>
                         <option
                             value="<?= e((string) $optionValue) ?>"
                             <?= $cssValue !== '' ? 'data-rs-css-value="' . e($cssValue) . '"' : '' ?>
@@ -174,19 +214,20 @@ $renderControl = static function (string $key, array $control, array $values): v
             <span class="rs-brand-mark" aria-hidden="true"><?= icon('palette', 'icon') ?></span>
             <span class="rs-brand-copy">
                 <span class="rs-brand-name">RESKIN</span>
-                <span class="rs-brand-sub">Éditeur visuel</span>
+                <span class="rs-brand-sub">Éditeur par section</span>
             </span>
             <button type="button" class="rs-sidebar-close" data-rs-sidebar-close aria-label="Fermer le menu">
                 <?= icon('close', 'icon icon--sm') ?>
             </button>
         </div>
 
-        <nav class="rs-nav" aria-label="Catégories de personnalisation">
+        <nav class="rs-nav" aria-label="Sections de la page">
             <?php foreach ($categories as $categoryKey => $category): ?>
                 <button
                     type="button"
                     class="rs-nav-link<?= (string) $categoryKey === $firstKey ? ' is-active' : '' ?>"
                     data-rs-tab="<?= e((string) $categoryKey) ?>"
+                    data-rs-target="<?= e((string) ($category['target'] ?? '')) ?>"
                     aria-controls="rs-panel-<?= e((string) $categoryKey) ?>"
                     aria-selected="<?= (string) $categoryKey === $firstKey ? 'true' : 'false' ?>"
                 >
@@ -199,7 +240,7 @@ $renderControl = static function (string $key, array $control, array $values): v
 
         <div class="rs-sidebar-block">
             <div class="rs-sidebar-heading-row">
-                <p class="rs-sidebar-heading">Thèmes enregistrés</p>
+                <p class="rs-sidebar-heading">Styles enregistrés</p>
                 <span class="rs-count" data-rs-library-count><?= count($library) ?></span>
             </div>
 
@@ -213,8 +254,8 @@ $renderControl = static function (string $key, array $control, array $values): v
                             title="Charger « <?= e((string) $name) ?> »"
                         >
                             <span class="rs-theme-swatches" aria-hidden="true">
-                                <i data-rs-swatch-color="<?= e((string) ($theme['values']['primary'] ?? '#A9552F')) ?>"></i>
-                                <i data-rs-swatch-color="<?= e((string) ($theme['values']['secondary'] ?? '#1B1A18')) ?>"></i>
+                                <i data-rs-swatch-color="<?= e((string) ($theme['values']['primary'] ?? '#704F38')) ?>"></i>
+                                <i data-rs-swatch-color="<?= e((string) ($theme['values']['accent'] ?? '#704F38')) ?>"></i>
                                 <i data-rs-swatch-color="<?= e((string) ($theme['values']['background'] ?? '#FFFFFF')) ?>"></i>
                             </span>
                             <span class="rs-theme-name"><?= e((string) $name) ?></span>
@@ -224,7 +265,7 @@ $renderControl = static function (string $key, array $control, array $values): v
                             type="button"
                             class="rs-theme-remove"
                             data-rs-theme-delete="<?= e((string) $name) ?>"
-                            aria-label="Supprimer le thème <?= e((string) $name) ?>"
+                            aria-label="Supprimer le style <?= e((string) $name) ?>"
                         >
                             <?= icon('trash', 'icon icon--sm') ?>
                         </button>
@@ -233,7 +274,7 @@ $renderControl = static function (string $key, array $control, array $values): v
             </ul>
 
             <p class="rs-theme-empty" data-rs-theme-empty<?= $library === [] ? '' : ' hidden' ?>>
-                Aucun thème enregistré pour le moment.
+                Aucun style enregistré pour le moment.
             </p>
 
             <div class="rs-save-theme">
@@ -241,8 +282,8 @@ $renderControl = static function (string $key, array $control, array $values): v
                     type="text"
                     class="rs-input"
                     maxlength="40"
-                    placeholder="Nom du thème"
-                    aria-label="Nom du thème à enregistrer"
+                    placeholder="Nom du style"
+                    aria-label="Nom du style à enregistrer"
                     data-rs-theme-name
                 >
                 <button type="button" class="rs-btn rs-btn--ghost rs-btn--compact" data-rs-theme-save>
@@ -250,6 +291,10 @@ $renderControl = static function (string $key, array $control, array $values): v
                     Ajouter
                 </button>
             </div>
+
+            <p class="rs-sidebar-note">
+                Les textes sont publiés sur la boutique dès « Enregistrer ». Les couleurs et la mise en page nécessitent « Appliquer au site ».
+            </p>
         </div>
 
         <div class="rs-sidebar-foot">
@@ -270,12 +315,12 @@ $renderControl = static function (string $key, array $control, array $values): v
 
     <div class="rs-main">
         <header class="rs-toolbar">
-            <button type="button" class="rs-icon-btn rs-menu-btn" data-rs-sidebar-open aria-label="Ouvrir les catégories">
+            <button type="button" class="rs-icon-btn rs-menu-btn" data-rs-sidebar-open aria-label="Ouvrir les sections">
                 <?= icon('menu', 'icon') ?>
             </button>
 
             <div class="rs-toolbar-title">
-                <p class="rs-eyebrow"><?= e($storeName) ?> · Apparence</p>
+                <p class="rs-eyebrow"><?= e($storeName) ?> · Apparence &amp; contenu</p>
                 <h1 class="rs-app-title">RESKIN</h1>
             </div>
 
@@ -302,7 +347,7 @@ $renderControl = static function (string $key, array $control, array $values): v
 
                 <button type="button" class="rs-btn rs-btn--apply" data-rs-apply>
                     <?= icon('power', 'icon icon--sm') ?>
-                    <span class="rs-btn-label" data-rs-apply-label><?= $applied ? 'Retirer du site' : 'Appliquer au site' ?></span>
+                    <span class="rs-btn-label" data-rs-apply-label><?= $applied ? 'Retirer les styles' : 'Appliquer les styles' ?></span>
                 </button>
             </div>
         </header>
@@ -323,9 +368,28 @@ $renderControl = static function (string $key, array $control, array $values): v
                         data-desc="<?= e((string) ($category['description'] ?? '')) ?>"
                         <?= (string) $categoryKey === $firstKey ? '' : 'hidden' ?>
                     >
-                        <?php foreach (($category['controls'] ?? []) as $controlKey => $control): ?>
-                            <?php $renderControl((string) $controlKey, (array) $control, $values); ?>
-                        <?php endforeach; ?>
+                        <?php if (!empty($category['notice'])): ?>
+                            <p class="rs-notice"><?= icon('alert-circle', 'icon icon--sm') ?> <?= e((string) $category['notice']) ?></p>
+                        <?php endif; ?>
+
+                        <?php
+                        $lastGroup = '';
+
+                        foreach (($category['controls'] ?? []) as $controlKey => $control):
+                            $control = (array) $control;
+                            $group   = (string) ($control['group'] ?? '');
+
+                            if ($group !== '' && $group !== $lastGroup):
+                                ?>
+                                <p class="rs-control-group"><?= e($group) ?></p>
+                                <?php
+                            endif;
+
+                            $lastGroup = $group;
+
+                            $renderControl((string) $controlKey, $control, $values, $content);
+                        endforeach;
+                        ?>
                     </div>
                 <?php endforeach; ?>
             </section>
@@ -368,7 +432,7 @@ $renderControl = static function (string $key, array $control, array $values): v
                 <div class="rs-preview-foot">
                     <span class="rs-live"><span class="rs-live-dot" aria-hidden="true"></span> Aperçu en direct</span>
                     <span class="rs-apply-state" data-rs-apply-state>
-                        <?= $applied ? 'Thème appliqué sur la boutique' : 'Non appliqué — la boutique garde son design actuel' ?>
+                        <?= $applied ? 'Styles appliqués sur la boutique' : 'Non appliqué — la boutique garde son design actuel' ?>
                     </span>
                 </div>
             </section>

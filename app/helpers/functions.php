@@ -304,6 +304,71 @@ function whatsapp_display(): string
 }
 
 /**
+ * Store name, editable from the admin settings.
+ */
+function store_name(): string
+{
+    $name = trim((string) setting('store_name', (string) config('app_name')));
+
+    return $name !== '' ? $name : (string) config('app_name');
+}
+
+/**
+ * Split the store name for the two-tone wordmark ("Shoop" + "Moda Style").
+ *
+ * @return array{0: string, 1: string}
+ */
+function brand_parts(): array
+{
+    $name  = store_name();
+    $space = strpos($name, ' ');
+
+    if ($space === false) {
+        return [$name, ''];
+    }
+
+    return [substr($name, 0, $space), trim(substr($name, $space + 1))];
+}
+
+/**
+ * Public URL of the uploaded logo, or null when the store uses its wordmark.
+ */
+function site_logo_url(): ?string
+{
+    $logo = trim((string) setting('site_logo', ''));
+
+    if ($logo === '' || !is_file(PUBLIC_PATH . '/' . ltrim($logo, '/'))) {
+        return null;
+    }
+
+    return url(ltrim($logo, '/'));
+}
+
+/**
+ * Active categories for the header, drawer and footer navigation.
+ *
+ * The admin area is the single source of truth, so adding, renaming or
+ * hiding a category updates every menu of the shop at once.
+ *
+ * @param int $limit 0 = every active category.
+ * @return array<int, array<string, mixed>>
+ */
+function nav_categories(int $limit = 4): array
+{
+    static $categories = null;
+
+    if ($categories === null) {
+        try {
+            $categories = \App\Models\Category::all();
+        } catch (\Throwable) {
+            $categories = [];
+        }
+    }
+
+    return $limit > 0 ? array_slice($categories, 0, $limit) : $categories;
+}
+
+/**
  * Inline SVG icon markup.
  */
 function icon(string $name, string $class = 'icon'): string

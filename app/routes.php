@@ -69,6 +69,8 @@ $router->post($adminPath . '/produits/{id}/supprimer', [AdminController::class, 
 
 $router->get($adminPath . '/categories', [AdminController::class, 'categories']);
 $router->post($adminPath . '/categories', [AdminController::class, 'storeCategory']);
+$router->get($adminPath . '/categories/{id}/modifier', [AdminController::class, 'editCategoryForm']);
+$router->post($adminPath . '/categories/{id}/modifier', [AdminController::class, 'updateCategory']);
 $router->post($adminPath . '/categories/{id}/supprimer', [AdminController::class, 'deleteCategory']);
 
 $router->get($adminPath . '/reglages', [AdminController::class, 'settings']);

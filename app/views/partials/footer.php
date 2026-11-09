@@ -4,51 +4,66 @@ declare(strict_types=1);
 
 /**
  * Footer partial.
- * Only links that exist in the PRD scope are rendered here
- * (no fake "Track order" / "FAQ" pages).
+ *
+ * Categories, description, logo and social link are all editable from the
+ * admin / RESKIN, so this template never needs to be touched by the owner.
  */
+
+$content   = \App\Models\SiteContent::section('footer');
+$footerCats = nav_categories(5);
+$instagram = trim((string) \App\Models\Setting::raw('instagram_url', (string) config('instagram_url')));
+$logo      = site_logo_url();
+[$brandFirst, $brandSecond] = brand_parts();
 ?>
 <footer class="site-footer">
     <div class="wrap footer-grid">
         <div class="footer-brand">
             <a class="footer-logo" href="<?= e(url('/')) ?>">
-                <span class="brand-wordmark footer-wordmark">
-                    <span class="brand-first">Shoop</span><span class="brand-second">Moda</span>
-                </span>
-                <span class="footer-logo-sub"></span>
-                <span class="visually-hidden"><?= e(config('app_name')) ?> — Accueil</span>
+                <?php if ($logo !== null): ?>
+                    <img class="footer-logo-img" src="<?= e($logo) ?>" alt="<?= e(store_name()) ?>" width="160" height="48">
+                <?php else: ?>
+                    <span class="brand-wordmark footer-wordmark">
+                        <span class="brand-first"><?= e($brandFirst) ?></span><?php if ($brandSecond !== ''): ?><span class="brand-second"><?= e($brandSecond) ?></span><?php endif; ?>
+                    </span>
+                <?php endif; ?>
+                <span class="footer-logo-sub"><?= e((string) ($content['logo_sub'] ?? '')) ?></span>
+                <span class="visually-hidden"><?= e(store_name()) ?> — Accueil</span>
             </a>
 
             <p class="footer-desc">
-                Mode turque premium et pyjamas pour femme et enfant au Maroc.
-                Livraison directe à votre porte.
+                <?= e((string) ($content['description'] ?? '')) ?>
             </p>
 
-            <a
-                class="footer-social"
-                href="<?= e(config('instagram_url')) ?>"
-                target="_blank"
-                rel="noopener"
-                aria-label="Instagram Shoop Moda Style"
-            >
-                <?= icon('instagram', 'icon') ?>
-            </a>
+            <?php if ($instagram !== ''): ?>
+                <a
+                    class="footer-social"
+                    href="<?= e($instagram) ?>"
+                    target="_blank"
+                    rel="noopener"
+                    aria-label="Instagram <?= e(store_name()) ?>"
+                >
+                    <?= icon('instagram', 'icon') ?>
+                </a>
+            <?php endif; ?>
         </div>
 
         <div class="footer-col">
-            <h2 class="footer-title">Catégories</h2>
+            <h2 class="footer-title"><?= e((string) ($content['categories_title'] ?? 'Catégories')) ?></h2>
             <ul class="footer-links">
                 <li><a href="<?= e(url('/produits')) ?>">Toutes les pièces</a></li>
-                <li><a href="<?= e(url('/categorie/femme')) ?>">Collection femme</a></li>
-                <li><a href="<?= e(url('/categorie/enfants')) ?>">Mode enfant</a></li>
-                <li><a href="<?= e(url('/categorie/pyjamas')) ?>">Pyjamas &amp; ensembles</a></li>
-                <li><a href="<?= e(url('/categorie/robes')) ?>">Robes</a></li>
+                <?php foreach ($footerCats as $category): ?>
+                    <li>
+                        <a href="<?= e(url('/categorie/' . (string) ($category['slug'] ?? ''))) ?>">
+                            <?= e((string) ($category['name'] ?? '')) ?>
+                        </a>
+                    </li>
+                <?php endforeach; ?>
                 <li><a href="<?= e(url('/promotions')) ?>">Promotions</a></li>
             </ul>
         </div>
 
         <div class="footer-col">
-            <h2 class="footer-title">Aide</h2>
+            <h2 class="footer-title"><?= e((string) ($content['help_title'] ?? 'Aide')) ?></h2>
             <ul class="footer-links">
                 <li><a href="<?= e(url('/panier')) ?>">Mon panier</a></li>
                 <li><a href="<?= e(url('/favoris')) ?>">Mes favoris</a></li>
@@ -61,23 +76,23 @@ declare(strict_types=1);
         </div>
 
         <div class="footer-col">
-            <h2 class="footer-title">Commande rapide</h2>
+            <h2 class="footer-title"><?= e((string) ($content['order_title'] ?? 'Commande rapide')) ?></h2>
             <div class="footer-wa-card">
-                <span class="footer-wa-label">Commandez directement via WhatsApp :</span>
+                <span class="footer-wa-label"><?= e((string) ($content['whatsapp_label'] ?? '')) ?></span>
                 <a class="footer-wa-btn" href="<?= e(whatsapp_url()) ?>" target="_blank" rel="noopener">
                     <?= icon('whatsapp', 'icon icon--sm') ?>
                     <?= e(whatsapp_display()) ?>
                 </a>
                 <div class="footer-pills">
-                    <span class="pill">Tout le Maroc</span>
-                    <span class="pill">Express 24-48h</span>
+                    <span class="pill"><?= e((string) ($content['pill_1'] ?? '')) ?></span>
+                    <span class="pill"><?= e((string) ($content['pill_2'] ?? '')) ?></span>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="wrap footer-bottom">
-        <p>&copy; <?= e(date('Y')) ?> <strong><?= e(config('app_name')) ?></strong>. Tous droits réservés.</p>
-        <p>Conçu pour un shopping mobile rapide au Maroc.</p>
+        <p>&copy; <?= e(date('Y')) ?> <strong><?= e(store_name()) ?></strong>. Tous droits réservés.</p>
+        <p><?= e((string) ($content['bottom_note'] ?? '')) ?></p>
     </div>
 </footer>

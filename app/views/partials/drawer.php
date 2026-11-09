@@ -8,14 +8,22 @@ declare(strict_types=1);
  */
 
 $drawerLinks = [
-    ['label' => 'Accueil',            'url' => '/',                    'icon' => 'home'],
-    ['label' => 'Toutes les pièces',  'url' => '/produits',            'icon' => 'shirt'],
-    ['label' => 'Femme',              'url' => '/categorie/femme',     'icon' => null],
-    ['label' => 'Enfants',            'url' => '/categorie/enfants',   'icon' => null],
-    ['label' => 'Pyjamas & Ensembles', 'url' => '/categorie/pyjamas',  'icon' => null],
-    ['label' => 'Robes',              'url' => '/categorie/robes',     'icon' => null],
-    ['label' => 'Promotions',         'url' => '/promotions',          'icon' => null],
+    ['label' => 'Accueil',           'url' => '/',           'icon' => 'home'],
+    ['label' => 'Toutes les pièces', 'url' => '/produits',   'icon' => 'shirt'],
 ];
+
+foreach (nav_categories(0) as $category) {
+    $drawerLinks[] = [
+        'label' => (string) ($category['name'] ?? ''),
+        'url'   => '/categorie/' . (string) ($category['slug'] ?? ''),
+        'icon'  => (string) (($category['icon'] ?? '') !== '' ? $category['icon'] : 'tag'),
+    ];
+}
+
+$drawerLinks[] = ['label' => 'Promotions', 'url' => '/promotions', 'icon' => 'tag'];
+
+$logo = site_logo_url();
+[$brandFirst, $brandSecond] = brand_parts();
 ?>
 <aside
     class="drawer"
@@ -28,12 +36,16 @@ $drawerLinks = [
 >
     <div class="drawer-head">
         <span class="brand">
-            <span class="brand-text">
-                <span class="brand-wordmark">
-                    <span class="brand-first">Shoop</span><span class="brand-second">Moda</span>
+            <?php if ($logo !== null): ?>
+                <img class="brand-logo" src="<?= e($logo) ?>" alt="<?= e(store_name()) ?>" width="150" height="44">
+            <?php else: ?>
+                <span class="brand-text">
+                    <span class="brand-wordmark">
+                        <span class="brand-first"><?= e($brandFirst) ?></span><?php if ($brandSecond !== ''): ?><span class="brand-second"><?= e($brandSecond) ?></span><?php endif; ?>
+                    </span>
+                    <span class="brand-tagline"></span>
                 </span>
-                <span class="brand-tagline"></span>
-            </span>
+            <?php endif; ?>
         </span>
 
         <button type="button" class="icon-btn" id="drawerClose" aria-label="Fermer le menu">
@@ -105,7 +117,7 @@ $drawerLinks = [
             <p class="drawer-support-title">Une question ?</p>
             <a
                 class="btn btn--wa btn--block"
-                href="<?= e(whatsapp_url('Bonjour Shoop Moda Style, je souhaite passer une commande.')) ?>"
+                href="<?= e(whatsapp_url('Bonjour ' . store_name() . ', je souhaite passer une commande.')) ?>"
                 target="_blank"
                 rel="noopener"
             >

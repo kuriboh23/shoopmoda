@@ -27,7 +27,7 @@ final class ProductController
         $result  = Product::list($slug, $page, $perPage);
 
         View::render('products/category', [
-            'title'       => $category['name'] . ' — ' . config('app_name'),
+            'title'       => $category['name'] . ' — ' . store_name(),
             'description' => 'Découvrez la collection ' . $category['name'] . ' chez Shoop Moda Style. Vêtements turcs femme et enfant au Maroc.',
             'canonical'   => url('/categorie/' . $slug),
             'cartCount'   => Cart::count(),
@@ -50,7 +50,7 @@ final class ProductController
         }
 
         View::render('products/show', [
-            'title'       => $product['title'] . ' — ' . config('app_name'),
+            'title'       => $product['title'] . ' — ' . store_name(),
             'description' => mb_substr(trim(strip_tags((string) ($product['description'] ?? ''))), 0, 160),
             'canonical'   => url('/produit/' . $slug),
             'cartCount'   => Cart::count(),
@@ -110,7 +110,7 @@ final class ProductController
         }
 
         View::render('products/index', [
-            'title'          => 'Toutes les pièces — ' . config('app_name'),
+            'title'          => 'Toutes les pièces — ' . store_name(),
             'description'    => 'Parcourez toutes les pièces Shoop Moda Style : femme, enfant, pyjamas et robes importés de Turquie.',
             'canonical'      => url('/produits'),
             'cartCount'      => Cart::count(),
@@ -129,7 +129,7 @@ final class ProductController
     public function promotions(): void
     {
         View::render('products/promotions', [
-            'title'       => 'Promotions — ' . config('app_name'),
+            'title'       => 'Promotions — ' . store_name(),
             'description' => 'Offres flash et promotions en cours chez Shoop Moda Style.',
             'canonical'   => url('/promotions'),
             'cartCount'   => Cart::count(),
@@ -146,7 +146,7 @@ final class ProductController
         http_response_code(404);
 
         View::render('errors/404', [
-            'title'       => $title . ' — ' . config('app_name'),
+            'title'       => $title . ' — ' . store_name(),
             'description' => $description,
             'canonical'   => url('/'),
             'cartCount'   => Cart::count(),

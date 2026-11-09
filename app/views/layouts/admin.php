@@ -18,12 +18,18 @@ $pageTitle   = $title ?? 'Gestion — ' . config('app_name');
 $adminTitle  = $adminTitle ?? 'Gestion';
 $flash       = $flash ?? flash_message();
 
+[$brandFirst, $brandSecond] = brand_parts();
+
 $navItems = [
     ['key' => 'dashboard', 'label' => 'Tableau', 'icon' => 'grid', 'url' => admin_url()],
     ['key' => 'products', 'label' => 'Produits', 'icon' => 'box', 'url' => admin_url('produits')],
     ['key' => 'categories', 'label' => 'Catégories', 'icon' => 'tag', 'url' => admin_url('categories')],
     ['key' => 'settings', 'label' => 'Réglages', 'icon' => 'settings', 'url' => admin_url('reglages')],
 ];
+
+// RESKIN is a separate tool with its own password, but the admin can open it
+// without logging in again (ReskinController accepts the admin session).
+$reskinNav = ['key' => 'reskin', 'label' => 'Apparence', 'icon' => 'palette', 'url' => url('/' . trim((string) config('reskin_path', 'reskin'), '/'))];
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -49,7 +55,7 @@ $navItems = [
             <aside class="admin-sidebar">
                 <a class="admin-brand" href="<?= e(admin_url()) ?>">
                     <span class="brand-wordmark">
-                        <span class="brand-first">Shoop</span><span class="brand-second">Moda</span>
+                        <span class="brand-first"><?= e($brandFirst) ?></span><?php if ($brandSecond !== ''): ?><span class="brand-second"><?= e($brandSecond) ?></span><?php endif; ?>
                     </span>
                     <span class="admin-brand-tag">Gestion</span>
                 </a>
@@ -65,6 +71,11 @@ $navItems = [
                             <?= e($item['label']) ?>
                         </a>
                     <?php endforeach; ?>
+
+                    <a class="admin-nav-link" href="<?= e($reskinNav['url']) ?>">
+                        <?= icon($reskinNav['icon'], 'icon icon--sm') ?>
+                        <?= e($reskinNav['label']) ?>
+                    </a>
                 </nav>
 
                 <div class="admin-sidebar-foot">
@@ -128,6 +139,11 @@ $navItems = [
                     <span><?= e($item['label']) ?></span>
                 </a>
             <?php endforeach; ?>
+
+            <a class="admin-bottomnav-link" href="<?= e($reskinNav['url']) ?>">
+                <?= icon($reskinNav['icon'], 'icon') ?>
+                <span><?= e($reskinNav['label']) ?></span>
+            </a>
         </nav>
     <?php endif; ?>
 </body>

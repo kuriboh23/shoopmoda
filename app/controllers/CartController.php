@@ -18,7 +18,7 @@ final class CartController
         $delivery  = Cart::deliveryFee($subtotal);
 
         View::render('cart', [
-            'title'       => 'Panier — ' . config('app_name'),
+            'title'       => 'Panier — ' . store_name(),
             'description' => 'Récapitulatif de votre commande. Paiement et suivi via WhatsApp.',
             'canonical'   => url('/panier'),
             'cartCount'   => Cart::count(),
@@ -208,7 +208,7 @@ final class CartController
         $delivery = Cart::deliveryFee($subtotal);
 
         View::render('checkout', [
-            'title'       => 'Finaliser ma commande — ' . config('app_name'),
+            'title'       => 'Finaliser ma commande — ' . store_name(),
             'description' => 'Renseignez vos informations de livraison : la commande est confirmée sur WhatsApp.',
             'canonical'   => url('/commande'),
             'cartCount'   => Cart::count(),
@@ -241,7 +241,7 @@ final class CartController
     private function orderMessage(array $customer, array $items, float $subtotal, float $delivery): string
     {
         $lines   = [];
-        $lines[] = '🛍️ *Nouvelle commande* — ' . config('app_name');
+        $lines[] = '🛍️ *Nouvelle commande* — ' . store_name();
         $lines[] = '';
         $lines[] = '*👤 Client*';
         $lines[] = '• Nom : ' . $customer['name'];

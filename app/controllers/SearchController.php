@@ -33,7 +33,7 @@ final class SearchController
         }
 
         View::render('search', [
-            'title'       => ($query !== '' ? $query . ' — ' : '') . 'Recherche — ' . config('app_name'),
+            'title'       => ($query !== '' ? $query . ' — ' : '') . 'Recherche — ' . store_name(),
             'description' => 'Recherchez un pyjama, une robe ou un ensemble dans la boutique Shoop Moda Style.',
             'canonical'   => url('/recherche'),
             'cartCount'   => Cart::count(),

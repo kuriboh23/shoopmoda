@@ -29,6 +29,7 @@
     var preview = app.querySelector('[data-rs-preview]');
     var stage = app.querySelector('[data-rs-stage]');
     var inputs = Array.prototype.slice.call(app.querySelectorAll('[data-rs-input]'));
+    var contentInputs = Array.prototype.slice.call(app.querySelectorAll('[data-rs-content]'));
     var statusEl = app.querySelector('[data-rs-status]');
     var statusText = app.querySelector('[data-rs-status-text]');
     var applyButton = app.querySelector('[data-rs-apply]');
@@ -100,6 +101,77 @@
         });
 
         return result;
+    }
+
+    function contentValues() {
+        var result = {};
+
+        contentInputs.forEach(function (input) {
+            result[input.getAttribute('data-rs-content')] = input.value;
+        });
+
+        return result;
+    }
+
+    function messagesFromInput(input) {
+        return String(input.value || '').split(/\r\n|\r|\n/).map(function (line) {
+            return line.trim();
+        }).filter(function (line) {
+            return line !== '';
+        });
+    }
+
+    function applyContentPreview() {
+        var doc = previewDocument();
+
+        if (!doc) {
+            return;
+        }
+
+        contentInputs.forEach(function (input) {
+            var path = input.getAttribute('data-rs-content');
+
+            if (path === 'announcement.messages') {
+                var track = doc.querySelector('[data-rs-content-messages]');
+
+                if (!track) {
+                    return;
+                }
+
+                track.textContent = '';
+
+                messagesFromInput(input).forEach(function (message) {
+                    var span = doc.createElement('span');
+                    span.className = 'announcement-item';
+                    span.textContent = message;
+                    track.appendChild(span);
+                });
+
+                return;
+            }
+
+            Array.prototype.forEach.call(
+                doc.querySelectorAll('[data-rs-content="' + path + '"]'),
+                function (element) {
+                    if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+                        element.value = input.value;
+                    } else {
+                        element.textContent = input.value;
+                    }
+                }
+            );
+
+            // A slide can switch between the light and dark layout live.
+            if (/\.theme$/.test(path)) {
+                var slideElement = doc.querySelector('[data-rs-content="' + path.replace(/\.theme$/, '.eyebrow') + '"]');
+                var slide = slideElement ? slideElement.closest('.hero-slide') : null;
+
+                if (slide) {
+                    slide.classList.toggle('hero-slide--light', input.value !== 'dark');
+                    slide.classList.toggle('hero-slide--dark', input.value === 'dark');
+                }
+            }
+        });
     }
 
     function hexToRgba(hex, alpha) {
@@ -289,6 +361,7 @@
         preview.addEventListener('load', function () {
             frameReady = true;
             applyPreview();
+            applyContentPreview();
         });
     }
 
@@ -448,12 +521,35 @@
         }
 
         if (activeButton) {
+            focusPreviewSection(activeButton.getAttribute('data-rs-target') || '');
+
             try {
                 window.localStorage.setItem('rs_category', key);
             } catch (error) {
                 // Private browsing: the choice simply is not remembered.
             }
         }
+    }
+
+    function focusPreviewSection(target) {
+        var doc = previewDocument();
+
+        if (!doc || !target) {
+            return;
+        }
+
+        var section = doc.querySelector('[data-rs-section="' + target + '"]');
+
+        if (!section) {
+            return;
+        }
+
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        section.classList.add('rs-preview-focus');
+
+        window.setTimeout(function () {
+            section.classList.remove('rs-preview-focus');
+        }, 1400);
     }
 
     tabButtons.forEach(function (button) {
@@ -551,9 +647,14 @@
     function persist() {
         setStatus('saving', 'Enregistrement…');
 
-        return post(endpoints.save, { values: values() }).then(function (data) {
+        return post(endpoints.save, { values: values(), content: contentValues() }).then(function (data) {
             if (!data || data.ok !== true) {
                 throw new Error((data && data.error) || 'Enregistrement impossible.');
+            }
+
+            if (data.content) {
+                setContentValues(data.content);
+                applyContentPreview();
             }
 
             markSaved();
@@ -590,7 +691,7 @@
                 return;
             }
 
-            if (!window.confirm('Restaurer le design d’origine ? Les réglages actuels seront remplacés.')) {
+            if (!window.confirm('Restaurer le design d’origine ? Les styles actuels seront remplacés ; le contenu reste intact.')) {
                 return;
             }
 
@@ -602,8 +703,10 @@
                 }
 
                 setValues(data.values || {});
+                setContentValues(data.content || {});
                 markSaved();
                 applyPreview();
+                applyContentPreview();
                 toast(data.message || 'Réglages d’origine restaurés.');
             }).catch(function (error) {
                 toast(error.message || 'Réinitialisation impossible.', true);
@@ -621,12 +724,12 @@
         }
 
         if (applyLabel) {
-            applyLabel.textContent = applied ? 'Retirer du site' : 'Appliquer au site';
+            applyLabel.textContent = applied ? 'Retirer les styles' : 'Appliquer les styles';
         }
 
         if (applyState) {
             applyState.textContent = applied
-                ? 'Thème appliqué sur la boutique'
+                ? 'Styles appliqués sur la boutique'
                 : 'Non appliqué — la boutique garde son design actuel';
         }
     }
@@ -639,7 +742,7 @@
 
             var applied = app.getAttribute('data-applied') === '1';
 
-            if (applied && !window.confirm('Retirer le thème ? La boutique retrouvera son design d’origine.')) {
+            if (applied && !window.confirm('Retirer les styles ? La boutique retrouvera son design d’origine.')) {
                 return;
             }
 
@@ -655,7 +758,7 @@
                 }
 
                 setAppliedUi(!!data.applied);
-                toast(data.message || (applied ? 'Thème retiré.' : 'Thème appliqué.'));
+                toast(data.message || (applied ? 'Styles retirés.' : 'Styles appliqués.'));
             }).catch(function (error) {
                 toast(error.message || 'Action impossible.', true);
             }).finally(function () {
@@ -775,7 +878,7 @@
                     setValues(data.values || {});
                     markSaved();
                     applyPreview();
-                    toast(data.message || 'Thème chargé.');
+                    toast(data.message || 'Style chargé.');
                 }).catch(function (error) {
                     toast(error.message || 'Chargement impossible.', true);
                 }).finally(function () {
@@ -870,22 +973,50 @@
         });
     }
 
+    function setContentValues(next) {
+        contentInputs.forEach(function (input) {
+            var key = input.getAttribute('data-rs-content');
+            var value = next[key];
+
+            if (typeof value === 'undefined' || value === null) {
+                return;
+            }
+
+            input.value = String(value);
+        });
+    }
+
+    contentInputs.forEach(function (input) {
+        input.addEventListener('input', function () {
+            markDirty();
+            applyContentPreview();
+        });
+
+        input.addEventListener('change', function () {
+            markDirty();
+            applyContentPreview();
+        });
+    });
+
     /* ---------------------------------------------------------------
        Boot
        --------------------------------------------------------------- */
     setAppliedUi(app.getAttribute('data-applied') === '1');
     refreshThemeMeta();
     applyPreview();
+    applyContentPreview();
 
     window.addEventListener('message', function (event) {
         if (event.source === preview) {
             frameReady = true;
             applyPreview();
+            applyContentPreview();
         }
     });
 
     // The iframe may finish after this script; its load event covers that.
     if (frameReady) {
         applyPreview();
+        applyContentPreview();
     }
 })();

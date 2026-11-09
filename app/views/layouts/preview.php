@@ -6,9 +6,13 @@ declare(strict_types=1);
  * RESKIN preview layout — a real storefront page, loaded inside the
  * dashboard iframe with the site's own app.css and the RESKIN skin.
  *
+ * The saved tokens are inlined so the preview is already styled before the
+ * dashboard JavaScript takes over; the parent then applies unsaved values.
+ *
  * @var string      $content
  * @var string|null $title
  * @var string      $bodyAttrs
+ * @var string      $tokenCss
  */
 
 $pageTitle = $title ?? 'Aperçu';
@@ -21,7 +25,18 @@ $pageTitle = $title ?? 'Aperçu';
     <title><?= e($pageTitle) ?></title>
     <meta name="robots" content="noindex, nofollow">
     <link rel="stylesheet" href="<?= e(asset('css/app.css')) ?>">
+    <style><?= $tokenCss ?></style>
     <link rel="stylesheet" href="<?= e(asset('css/reskin-skin.css')) ?>">
+    <style>
+        [data-rs-section] {
+            scroll-margin-top: 76px;
+        }
+
+        .rs-preview-focus {
+            outline: 2px dashed #704F38;
+            outline-offset: 3px;
+        }
+    </style>
 </head>
 <body class="rs-preview-body" <?= $bodyAttrs ?>>
     <?= $content ?>

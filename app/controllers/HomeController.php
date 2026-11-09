@@ -22,8 +22,8 @@ final class HomeController
         $offerEnd   = Product::nextFlashEnd();
 
         View::render('home', [
-            'title'       => config('app_name') . ' — Mode turque femme & enfant',
-            'description' => 'Shoop Moda Style : vêtements et pyjamas turcs pour femme et enfant au Maroc.',
+            'title'       => store_name() . ' — Mode turque femme & enfant',
+            'description' => store_name() . ' : vêtements et pyjamas turcs pour femme et enfant au Maroc.',
             'canonical'   => url('/'),
             'slides'      => $slides,
             'whyUs'       => $whyUs,

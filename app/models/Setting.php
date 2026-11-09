@@ -72,6 +72,19 @@ final class Setting
     }
 
     /**
+     * Stored value without the "empty means default" rule used by get().
+     *
+     * Needed for fields where an empty string is a real choice, such as a
+     * social link the owner wants to hide.
+     */
+    public static function raw(string $key, mixed $default = null): mixed
+    {
+        $values = self::all();
+
+        return array_key_exists($key, $values) ? $values[$key] : $default;
+    }
+
+    /**
      * Create or update a setting (admin panel).
      */
     public static function put(string $key, string $value): void

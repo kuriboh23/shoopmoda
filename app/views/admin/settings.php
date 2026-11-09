@@ -16,13 +16,46 @@ if ($values['flash_sale_end'] !== '' && strtotime($values['flash_sale_end']) !==
 }
 
 $error = static fn (string $key): string => isset($errors[$key]) ? ' is-invalid' : '';
+$logoUrl = $values['logo'] !== '' && is_file(PUBLIC_PATH . '/' . ltrim($values['logo'], '/'))
+    ? url($values['logo'])
+    : null;
 ?>
 <?php if ($errors !== []): ?>
     <p class="admin-flash admin-flash--error" role="alert">Merci de corriger les champs signalés.</p>
 <?php endif; ?>
 
-<form class="admin-form" method="POST" action="<?= e(admin_url('reglages')) ?>" novalidate>
+<form class="admin-form" method="POST" action="<?= e(admin_url('reglages')) ?>" enctype="multipart/form-data" novalidate>
     <?= csrf_field() ?>
+
+    <section class="admin-card">
+        <h2 class="admin-card-title">Identité &amp; logo</h2>
+
+        <div class="admin-logo-field">
+            <div class="admin-logo-preview">
+                <?php if ($logoUrl !== null): ?>
+                    <img src="<?= e($logoUrl) ?>" alt="Logo actuel" width="180" height="64">
+                <?php else: ?>
+                    <span class="admin-logo-empty">Aucun logo — le nom s’affiche en lettres.</span>
+                <?php endif; ?>
+            </div>
+
+            <div class="admin-logo-actions">
+                <label class="field">
+                    <span class="field-label">Remplacer le logo</span>
+                    <input class="input" type="file" name="logo" accept="image/jpeg,image/png,image/webp">
+                    <span class="field-hint">JPG, PNG ou WebP, 2 Mo maximum. Affiché dans l’en-tête, le menu et le pied de page.</span>
+                    <?php if (isset($errors['logo'])): ?><span class="field-error"><?= e($errors['logo']) ?></span><?php endif; ?>
+                </label>
+
+                <?php if ($logoUrl !== null): ?>
+                    <label class="admin-check">
+                        <input type="checkbox" name="remove_logo" value="1">
+                        <span>Supprimer le logo et revenir au nom écrit</span>
+                    </label>
+                <?php endif; ?>
+            </div>
+        </div>
+    </section>
 
     <section class="admin-card">
         <h2 class="admin-card-title">Boutique</h2>
@@ -67,7 +100,24 @@ $error = static fn (string $key): string => isset($errors[$key]) ? ' is-invalid'
         <label class="field">
             <span class="field-label">Message principal</span>
             <input class="input" type="text" name="announcement_text" value="<?= e($values['announcement_text']) ?>" maxlength="140" placeholder="Livraison rapide partout au Maroc">
-            <span class="field-hint">140 caractères maximum. Affiché dans le bandeau haut du site.</span>
+            <span class="field-hint">Premier message du bandeau haut. Les autres messages se modifient dans RESKIN → Bandeau.</span>
+        </label>
+    </section>
+
+    <section class="admin-card">
+        <h2 class="admin-card-title">Pied de page &amp; réseaux</h2>
+
+        <label class="field">
+            <span class="field-label">Description du pied de page</span>
+            <textarea class="input" name="footer_description" rows="3" maxlength="300"><?= e($values['footer_description']) ?></textarea>
+            <span class="field-hint">Texte affiché sous le logo, en bas de chaque page.</span>
+        </label>
+
+        <label class="field">
+            <span class="field-label">Lien Instagram</span>
+            <input class="input<?= $error('instagram_url') ?>" type="url" name="instagram_url" value="<?= e($values['instagram_url']) ?>" maxlength="200" placeholder="https://instagram.com/votre-compte">
+            <span class="field-hint">Laisser vide pour masquer l’icône Instagram.</span>
+            <?php if (isset($errors['instagram_url'])): ?><span class="field-error"><?= e($errors['instagram_url']) ?></span><?php endif; ?>
         </label>
     </section>
 

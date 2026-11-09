@@ -55,11 +55,81 @@ final class ThemeStore
 
         foreach (self::schema()['categories'] ?? [] as $category) {
             foreach ($category['controls'] ?? [] as $key => $control) {
-                $controls[(string) $key] = (array) $control;
+                $control = (array) $control;
+
+                // Content fields (text/textarea and content selects) are stored
+                // by SiteContent, not in the theme file.
+                if (isset($control['content'])) {
+                    continue;
+                }
+
+                if (!in_array((string) ($control['type'] ?? ''), ['color', 'range', 'select', 'toggle'], true)) {
+                    continue;
+                }
+
+                if (($control['var'] ?? '') === '' && ($control['attr'] ?? '') === '') {
+                    continue;
+                }
+
+                $controls[(string) $key] = $control;
             }
         }
 
         return $controls;
+    }
+
+    /**
+     * CSS custom properties for the current (or given) values, without the
+     * skin rules. Used by the live preview so it is never unstyled while the
+     * dashboard JavaScript starts.
+     *
+     * @param array<string, mixed>|null $values
+     */
+    public static function tokenCss(?array $values = null): string
+    {
+        $values = self::normalize($values ?? self::values());
+        $tokens = [];
+
+        foreach (self::controls() as $key => $control) {
+            $var = (string) ($control['var'] ?? '');
+
+            if ($var === '') {
+                continue;
+            }
+
+            $value = $values[$key] ?? '';
+
+            if (($control['type'] ?? '') === 'range') {
+                $value .= (string) ($control['unit'] ?? '');
+            } elseif (($control['type'] ?? '') === 'select') {
+                $mapped = (array) ($control['values'] ?? []);
+                $value  = (string) ($mapped[$value] ?? $value);
+            }
+
+            $tokens[$var] = (string) $value;
+
+            foreach ((array) ($control['derived'] ?? []) as $derived) {
+                $derivedVar   = (string) ($derived['var'] ?? '');
+                $derivedAlpha = (float) ($derived['alpha'] ?? 0.1);
+
+                if ($derivedVar !== '') {
+                    $source = ($control['type'] ?? '') === 'color'
+                        ? (string) $value
+                        : (string) ($values['primary'] ?? '#704F38');
+
+                    $tokens[$derivedVar] = self::rgba($source, $derivedAlpha);
+                }
+            }
+        }
+
+        $css = ":root {\n";
+
+        foreach ($tokens as $name => $value) {
+            // Values come from the schema or from strictly validated input.
+            $css .= '    ' . $name . ': ' . $value . ";\n";
+        }
+
+        return $css . "}\n";
     }
 
     /**
@@ -443,50 +513,7 @@ final class ThemeStore
      */
     public static function css(?array $values = null): string
     {
-        $values = self::normalize($values ?? self::values());
-        $tokens = [];
-
-        foreach (self::controls() as $key => $control) {
-            $var = (string) ($control['var'] ?? '');
-
-            if ($var === '') {
-                continue;
-            }
-
-            $value = $values[$key] ?? '';
-
-            if (($control['type'] ?? '') === 'range') {
-                $value .= (string) ($control['unit'] ?? '');
-            } elseif (($control['type'] ?? '') === 'select') {
-                $mapped = (array) ($control['values'] ?? []);
-                $value  = (string) ($mapped[$value] ?? $value);
-            }
-
-            $tokens[$var] = (string) $value;
-
-            foreach ((array) ($control['derived'] ?? []) as $derived) {
-                $derivedVar   = (string) ($derived['var'] ?? '');
-                $derivedAlpha = (float) ($derived['alpha'] ?? 0.1);
-
-                if ($derivedVar !== '') {
-                    $source = ($control['type'] ?? '') === 'color'
-                        ? (string) $value
-                        : (string) ($values['primary'] ?? '#A9552F');
-
-                    $tokens[$derivedVar] = self::rgba($source, $derivedAlpha);
-                }
-            }
-        }
-
-        $tokenBlock = ":root {\n";
-
-        foreach ($tokens as $name => $value) {
-            // Values come from the schema or from strict validated input.
-            $tokenBlock .= '    ' . $name . ': ' . $value . ";\n";
-        }
-
-        $tokenBlock .= "}\n";
-
+        $tokenBlock = self::tokenCss($values);
         $skin = '';
 
         if (is_file(self::skinFile())) {
@@ -512,7 +539,7 @@ final class ThemeStore
         $hex = ltrim($hex, '#');
 
         if (strlen($hex) !== 6) {
-            $hex = 'A9552F';
+            $hex = '704F38';
         }
 
         $r = hexdec(substr($hex, 0, 2));

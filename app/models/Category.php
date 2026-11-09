@@ -76,18 +76,56 @@ final class Category
     public static function adminAll(): array
     {
         return Database::select(
-            "SELECT c.id, c.name, c.slug, c.sort_order, c.is_active,
+            "SELECT c.id, c.name, c.slug, c.icon, c.sort_order, c.is_active,
                     (SELECT COUNT(*) FROM products p WHERE p.category_id = c.id) AS product_count
              FROM categories c
              ORDER BY c.sort_order ASC, c.name ASC"
         );
     }
 
-    public static function create(string $name, string $slug, int $sortOrder = 0): void
+    /**
+     * @return array<string, mixed>|null
+     */
+    public static function adminFind(int $id): ?array
+    {
+        return Database::first(
+            'SELECT id, name, slug, icon, sort_order, is_active FROM categories WHERE id = :id LIMIT 1',
+            ['id' => $id]
+        );
+    }
+
+    public static function create(string $name, string $slug, int $sortOrder = 0, string $icon = '', bool $active = true): void
     {
         Database::execute(
-            'INSERT INTO categories (name, slug, sort_order, is_active) VALUES (:name, :slug, :sort_order, 1)',
-            ['name' => $name, 'slug' => $slug, 'sort_order' => $sortOrder]
+            'INSERT INTO categories (name, slug, icon, sort_order, is_active)
+             VALUES (:name, :slug, :icon, :sort_order, :is_active)',
+            [
+                'name'       => $name,
+                'slug'       => $slug,
+                'icon'       => $icon !== '' ? $icon : null,
+                'sort_order' => $sortOrder,
+                'is_active'  => $active ? 1 : 0,
+            ]
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    public static function update(int $id, array $data): void
+    {
+        Database::execute(
+            'UPDATE categories SET name = :name, slug = :slug, icon = :icon,
+                sort_order = :sort_order, is_active = :is_active
+             WHERE id = :id',
+            [
+                'id'         => $id,
+                'name'       => $data['name'],
+                'slug'       => $data['slug'],
+                'icon'       => ($data['icon'] ?? '') !== '' ? $data['icon'] : null,
+                'sort_order' => $data['sort_order'],
+                'is_active'  => $data['is_active'],
+            ]
         );
     }
 

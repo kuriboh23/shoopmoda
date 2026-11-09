@@ -60,6 +60,7 @@ require APP_PATH . '/models/Setting.php';
 require APP_PATH . '/models/Cart.php';
 require APP_PATH . '/models/Product.php';
 require APP_PATH . '/models/Category.php';
+require APP_PATH . '/models/SiteContent.php';
 
 $debug = (bool) config('app_debug', false);
 

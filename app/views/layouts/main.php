@@ -16,7 +16,7 @@ declare(strict_types=1);
  * @var int|null    $wishCount
  */
 
-$siteName    = (string) config('app_name');
+$siteName    = store_name();
 $pageTitle   = $title ?? $siteName;
 
 

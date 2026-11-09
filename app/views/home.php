@@ -19,17 +19,31 @@ declare(strict_types=1);
  * @var array $wishSlugs
  */
 
-$categoryIcon = static function (string $slug): string {
+$content = \App\Models\SiteContent::all();
+$slides  = array_values((array) ($content['hero']['slides'] ?? []));
+$promo   = (array) ($content['offer'] ?? []);
+$why     = (array) ($content['why'] ?? []);
+$whyUs   = array_values((array) ($why['cards'] ?? []));
+$explore = (array) ($content['categories'] ?? []);
+$featuredMeta = (array) ($content['featured'] ?? []);
+
+$categoryIcon = static function (array $category): string {
+    $icon = trim((string) ($category['icon'] ?? ''));
+
+    if ($icon !== '') {
+        return $icon;
+    }
+
     return match (true) {
-        str_contains($slug, 'enfant') => 'users',
-        str_contains($slug, 'pyjama') => 'moon',
-        str_contains($slug, 'femme')  => 'dress',
-        default                       => 'shirt',
+        str_contains((string) ($category['slug'] ?? ''), 'enfant') => 'users',
+        str_contains((string) ($category['slug'] ?? ''), 'pyjama') => 'moon',
+        str_contains((string) ($category['slug'] ?? ''), 'femme')  => 'dress',
+        default                                                   => 'shirt',
     };
 };
 ?>
 <section class="hero" aria-labelledby="heroTitle">
-    <h1 class="visually-hidden" id="heroTitle">Shoop Moda Style — mode turque femme et enfant</h1>
+    <h1 class="visually-hidden" id="heroTitle"><?= e(store_name()) ?> — mode turque femme et enfant</h1>
 
     <div class="hero-track" id="heroTrack">
         <?php foreach ($slides as $slide): ?>
@@ -74,7 +88,7 @@ $categoryIcon = static function (string $slug): string {
 
         <?php if ($offerEnd !== null): ?>
             <div class="offer-timer">
-                <?php partial('partials/countdown', ['endAt' => $offerEnd, 'label' => 'Fin de l’offre dans']); ?>
+                <?php partial('partials/countdown', ['endAt' => $offerEnd, 'label' => (string) ($promo['countdown_label'] ?? 'Fin de l’offre dans')]); ?>
             </div>
         <?php endif; ?>
     </div>
@@ -83,14 +97,14 @@ $categoryIcon = static function (string $slug): string {
 <?php if (!empty($categories)): ?>
     <section class="wrap home-explore" aria-labelledby="exploreTitle">
         <div class="home-explore-head">
-            <h2 class="home-explore-title" id="exploreTitle">Explorer par catégorie</h2>
-            <a class="section-link" href="<?= e(url('/produits')) ?>">Tout voir</a>
+            <h2 class="home-explore-title" id="exploreTitle"><?= e((string) ($explore['title'] ?? '')) ?></h2>
+            <a class="section-link" href="<?= e(url('/produits')) ?>"><?= e((string) ($explore['link_label'] ?? 'Tout voir')) ?></a>
         </div>
 
         <div class="chip-row home-chips">
             <?php foreach ($categories as $category): ?>
                 <a class="chip home-chip" href="<?= e(url('/categorie/' . $category['slug'])) ?>">
-                    <?= icon($categoryIcon((string) $category['slug']), 'icon icon--sm') ?>
+                    <?= icon($categoryIcon($category), 'icon icon--sm') ?>
                     <?= e($category['name']) ?>
                     <span class="chip-count"><?= (int) ($category['product_count'] ?? 0) ?></span>
                 </a>
@@ -104,10 +118,10 @@ $categoryIcon = static function (string $slug): string {
         <div class="wrap">
             <div class="section-head section-head--hero">
                 <div>
-                    <p class="eyebrow">Sélection de la semaine</p>
-                    <h2 class="section-title" id="featuredTitle">Nos pièces les plus demandées</h2>
+                    <p class="eyebrow"><?= e((string) ($featuredMeta['eyebrow'] ?? '')) ?></p>
+                    <h2 class="section-title" id="featuredTitle"><?= e((string) ($featuredMeta['title'] ?? '')) ?></h2>
                 </div>
-                <a class="section-link" href="<?= e(url('/produits')) ?>">Tout voir</a>
+                <a class="section-link" href="<?= e(url('/produits')) ?>"><?= e((string) ($featuredMeta['link_label'] ?? 'Tout voir')) ?></a>
             </div>
 
             <div class="product-grid">
@@ -123,12 +137,11 @@ $categoryIcon = static function (string $slug): string {
     <div class="wrap">
         <div class="why-head">
             <div class="why-head-main">
-                <p class="eyebrow">Nos engagements</p>
-                <h2 class="section-title" id="whyTitle">Pourquoi nous choisir</h2>
+                <p class="eyebrow"><?= e((string) ($why['eyebrow'] ?? '')) ?></p>
+                <h2 class="section-title" id="whyTitle"><?= e((string) ($why['title'] ?? '')) ?></h2>
             </div>
             <p class="why-lead">
-                Des pièces sélectionnées avec soin, une commande simple sur WhatsApp
-                et une livraison partout au Maroc.
+                <?= e((string) ($why['lead'] ?? '')) ?>
             </p>
         </div>
 

@@ -9,6 +9,7 @@ use App\Core\View;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Setting;
+use App\Models\SiteContent;
 
 /**
  * Store admin panel.
@@ -20,6 +21,23 @@ use App\Models\Setting;
 final class AdminController
 {
     private const SESSION_KEY = 'admin';
+
+    /**
+     * Icons the owner can attach to a category. The value is the icon name
+     * understood by app/helpers/icons.php.
+     */
+    private const CATEGORY_ICONS = [
+        'shirt'  => 'Vêtement',
+        'dress'  => 'Robe',
+        'jacket' => 'Veste',
+        'moon'   => 'Pyjama / nuit',
+        'users'  => 'Enfants',
+        'shoe'   => 'Chaussure',
+        'tag'    => 'Étiquette',
+        'gift'   => 'Cadeau',
+        'star'   => 'Étoile',
+        'home'   => 'Maison',
+    ];
 
     /* ------------------------------------------------------------------
        Authentication
@@ -453,6 +471,7 @@ final class AdminController
             'adminTitle'  => 'Catégories',
             'noindex'     => true,
             'categories'  => Category::adminAll(),
+            'icons'       => self::CATEGORY_ICONS,
         ], 'layouts/admin');
     }
 
@@ -469,6 +488,12 @@ final class AdminController
             redirect($this->path('categories'));
         }
 
+        $icon = (string) ($_POST['icon'] ?? '');
+
+        if (!array_key_exists($icon, self::CATEGORY_ICONS)) {
+            $icon = '';
+        }
+
         $slugSource = trim((string) ($_POST['slug'] ?? ''));
         $base       = Product::slugify($slugSource !== '' ? $slugSource : $name);
         $slug       = $base;
@@ -479,10 +504,105 @@ final class AdminController
             $suffix++;
         }
 
-        Category::create($name, $slug, (int) ($_POST['sort_order'] ?? 0));
+        Category::create(
+            $name,
+            $slug,
+            (int) ($_POST['sort_order'] ?? 0),
+            $icon,
+            isset($_POST['is_active'])
+        );
 
-        flash('success', 'Catégorie ajoutée.');
+        flash('success', 'Catégorie ajoutée. Elle apparaît maintenant dans le menu, les chips et le pied de page.');
         redirect($this->path('categories'));
+    }
+
+    public function editCategoryForm(string $id): void
+    {
+        $this->requireAdmin();
+
+        $category = Category::adminFind((int) $id);
+
+        if ($category === null) {
+            flash('error', 'Catégorie introuvable.');
+            redirect($this->path('categories'));
+        }
+
+        $this->renderCategoryForm($category, []);
+    }
+
+    public function updateCategory(string $id): void
+    {
+        $this->requireAdmin();
+
+        $category = Category::adminFind((int) $id);
+
+        if ($category === null) {
+            flash('error', 'Catégorie introuvable.');
+            redirect($this->path('categories'));
+        }
+
+        $this->requireCsrf($this->path('categories/' . $id . '/modifier'));
+
+        $values = [
+            'id'         => (int) $id,
+            'name'       => mb_substr(trim((string) ($_POST['name'] ?? '')), 0, 100),
+            'slug'       => trim((string) ($_POST['slug'] ?? '')),
+            'icon'       => (string) ($_POST['icon'] ?? ''),
+            'sort_order' => (string) (int) ($_POST['sort_order'] ?? 0),
+            'is_active'  => isset($_POST['is_active']) ? '1' : '0',
+        ];
+
+        $errors = [];
+
+        if (mb_strlen($values['name']) < 2) {
+            $errors['name'] = 'Le nom doit contenir au moins 2 caractères.';
+        }
+
+        if (!array_key_exists($values['icon'], self::CATEGORY_ICONS)) {
+            $values['icon'] = '';
+        }
+
+        $slugSource = $values['slug'] !== '' ? $values['slug'] : $values['name'];
+        $slug       = Product::slugify($slugSource);
+
+        if (Category::slugExists($slug, (int) $id)) {
+            $errors['slug'] = 'Cette adresse est déjà utilisée par une autre catégorie.';
+        }
+
+        if ($errors !== []) {
+            http_response_code(422);
+            $this->renderCategoryForm($values, $errors);
+
+            return;
+        }
+
+        Category::update((int) $id, [
+            'name'       => $values['name'],
+            'slug'       => $slug,
+            'icon'       => $values['icon'],
+            'sort_order' => (int) $values['sort_order'],
+            'is_active'  => $values['is_active'] === '1' ? 1 : 0,
+        ]);
+
+        flash('success', 'Catégorie mise à jour sur tout le site.');
+        redirect($this->path('categories'));
+    }
+
+    /**
+     * @param array<string, mixed>  $category
+     * @param array<string, string> $errors
+     */
+    private function renderCategoryForm(array $category, array $errors): void
+    {
+        View::render('admin/category-form', [
+            'title'       => 'Modifier une catégorie — Gestion ' . config('app_name'),
+            'adminActive' => 'categories',
+            'adminTitle'  => 'Modifier la catégorie',
+            'noindex'     => true,
+            'category'    => $category,
+            'errors'      => $errors,
+            'icons'       => self::CATEGORY_ICONS,
+        ], 'layouts/admin');
     }
 
     public function deleteCategory(string $id): void
@@ -518,6 +638,9 @@ final class AdminController
             'delivery_fee'      => trim((string) ($_POST['delivery_fee'] ?? '0')),
             'announcement_text' => mb_substr(trim((string) ($_POST['announcement_text'] ?? '')), 0, 140),
             'flash_sale_end'    => trim((string) ($_POST['flash_sale_end'] ?? '')),
+            'instagram_url'     => trim((string) ($_POST['instagram_url'] ?? '')),
+            'footer_description' => mb_substr(trim((string) ($_POST['footer_description'] ?? '')), 0, 300),
+            'logo'              => (string) setting('site_logo', ''),
         ];
 
         $errors = [];
@@ -538,7 +661,35 @@ final class AdminController
             $errors['flash_sale_end'] = 'Date de fin invalide.';
         }
 
+        if ($values['instagram_url'] !== '' && (
+            filter_var($values['instagram_url'], FILTER_VALIDATE_URL) === false
+            || preg_match('#^https?://#i', $values['instagram_url']) !== 1
+        )) {
+            $errors['instagram_url'] = 'Adresse Instagram invalide (elle doit commencer par https://).';
+        }
+
+        [$logoPath, $logoError] = $this->handleBrandUpload();
+
+        if ($logoError !== null) {
+            $errors['logo'] = $logoError;
+        }
+
+        if ($logoPath !== null) {
+            $this->deleteBrandFile((string) setting('site_logo', ''));
+            $values['logo'] = $logoPath;
+        } elseif (isset($_POST['remove_logo'])) {
+            $this->deleteBrandFile($values['logo']);
+            $values['logo'] = '';
+        }
+
         if ($errors !== []) {
+            // Do not keep an uploaded file that was not saved with the form.
+            if ($logoPath !== null) {
+                $this->deleteBrandFile($logoPath);
+            }
+
+            $values['logo'] = (string) setting('site_logo', '');
+
             http_response_code(422);
             $this->renderSettings($values, $errors);
 
@@ -549,12 +700,26 @@ final class AdminController
         Setting::put('whatsapp_number', $values['whatsapp_number']);
         Setting::put('delivery_fee', number_format((float) $values['delivery_fee'], 2, '.', ''));
         Setting::put('announcement_text', $values['announcement_text']);
+        Setting::put('instagram_url', $values['instagram_url']);
+        Setting::put('site_logo', $values['logo']);
         Setting::put(
             'flash_sale_end',
             $values['flash_sale_end'] !== '' ? date('Y-m-d H:i:s', (int) strtotime($values['flash_sale_end'])) : ''
         );
 
-        flash('success', 'Réglages enregistrés.');
+        SiteContent::applyFlat([
+            'announcement.messages' => implode("\n", array_slice(
+                SiteContent::section('announcement')['messages'] ?? [],
+                1
+            )),
+            'footer.description'    => $values['footer_description'],
+        ]);
+
+        // The form's announcement field replaces the first message only, so
+        // the other rotating messages are preserved.
+        SiteContent::setFirstAnnouncement($values['announcement_text']);
+
+        flash('success', 'Réglages enregistrés. Le site est mis à jour immédiatement.');
         redirect($this->path('reglages'));
     }
 
@@ -567,8 +732,11 @@ final class AdminController
             'store_name'        => (string) (Setting::get('store_name') ?? config('app_name')),
             'whatsapp_number'   => (string) (Setting::get('whatsapp_number') ?? config('whatsapp_number')),
             'delivery_fee'      => (string) (Setting::get('delivery_fee') ?? Setting::get('delivery_fee_economy') ?? '25'),
-            'announcement_text' => (string) (Setting::get('announcement_text') ?? config('announcement')['text'] ?? ''),
+            'announcement_text' => SiteContent::firstAnnouncement(),
             'flash_sale_end'    => (string) (Setting::get('flash_sale_end') ?? ''),
+            'instagram_url'     => (string) (Setting::raw('instagram_url', config('instagram_url') ?? '')),
+            'footer_description' => (string) (SiteContent::section('footer')['description'] ?? ''),
+            'logo'              => (string) (Setting::get('site_logo') ?? ''),
         ];
     }
 
@@ -586,6 +754,69 @@ final class AdminController
             'values'      => $values,
             'errors'      => $errors,
         ], 'layouts/admin');
+    }
+
+    /* ------------------------------------------------------------------
+       Brand logo upload
+       ------------------------------------------------------------------ */
+
+    /**
+     * @return array{0: string|null, 1: string|null}
+     */
+    private function handleBrandUpload(): array
+    {
+        if (!isset($_FILES['logo']) || ($_FILES['logo']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            return [null, null];
+        }
+
+        $file = $_FILES['logo'];
+
+        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            return [null, 'Le téléversement du logo a échoué, réessayez.'];
+        }
+
+        if ((int) ($file['size'] ?? 0) > 2 * 1024 * 1024) {
+            return [null, 'Logo trop lourd (2 Mo maximum).'];
+        }
+
+        $info = @getimagesize((string) $file['tmp_name']);
+
+        $extensions = [
+            IMAGETYPE_JPEG => 'jpg',
+            IMAGETYPE_PNG  => 'png',
+            IMAGETYPE_WEBP => 'webp',
+        ];
+
+        if ($info === false || !isset($extensions[$info[2]])) {
+            return [null, 'Format accepté : JPG, PNG ou WebP.'];
+        }
+
+        $directory = PUBLIC_PATH . '/uploads/brand';
+
+        if (!is_dir($directory) && !@mkdir($directory, 0775, true)) {
+            return [null, 'Dossier d’images inaccessible.'];
+        }
+
+        $filename = 'logo-' . bin2hex(random_bytes(8)) . '.' . $extensions[$info[2]];
+
+        if (!@move_uploaded_file((string) $file['tmp_name'], $directory . '/' . $filename)) {
+            return [null, 'Enregistrement du logo impossible.'];
+        }
+
+        return ['uploads/brand/' . $filename, null];
+    }
+
+    private function deleteBrandFile(string $path): void
+    {
+        if (!str_starts_with($path, 'uploads/brand/')) {
+            return;
+        }
+
+        $file = PUBLIC_PATH . '/' . $path;
+
+        if (is_file($file)) {
+            @unlink($file);
+        }
     }
 
     /* ------------------------------------------------------------------
