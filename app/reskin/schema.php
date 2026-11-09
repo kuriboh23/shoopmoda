@@ -219,74 +219,6 @@ return [
         ],
 
         /* ================================================================== */
-        'header' => [
-            'label'       => 'En-tête & menu',
-            'icon'        => 'panel',
-            'description' => 'Barre supérieure, logo et liens de navigation.',
-            'target'      => 'header',
-            'notice'      => 'Le nom de la boutique et le logo se modifient dans Gestion → Réglages. Les liens du menu suivent automatiquement vos catégories.',
-            'controls'    => [
-                'header_bg' => [
-                    'label'   => 'Fond de l’en-tête',
-                    'type'    => 'color',
-                    'default' => '#FFFFFF',
-                    'var'     => '--rs-header-bg',
-                ],
-                'header_border' => [
-                    'label'   => 'Bordure inférieure',
-                    'type'    => 'color',
-                    'default' => '#EDEDED',
-                    'var'     => '--rs-header-border',
-                ],
-                'header_height' => [
-                    'label'   => 'Hauteur de l’en-tête',
-                    'type'    => 'range',
-                    'default' => 65,
-                    'min'     => 48,
-                    'max'     => 96,
-                    'step'    => 2,
-                    'unit'    => 'px',
-                    'var'     => '--rs-header-h',
-                ],
-                'logo_size' => [
-                    'label'   => 'Taille du logo / du nom',
-                    'type'    => 'range',
-                    'default' => 18,
-                    'min'     => 14,
-                    'max'     => 32,
-                    'step'    => 1,
-                    'unit'    => 'px',
-                    'var'     => '--rs-logo-size',
-                ],
-                'nav_color' => [
-                    'label'   => 'Couleur des liens',
-                    'type'    => 'color',
-                    'default' => '#1F2029',
-                    'var'     => '--rs-nav-color',
-                ],
-                'nav_spacing' => [
-                    'label'   => 'Espacement du menu',
-                    'type'    => 'range',
-                    'default' => 22,
-                    'min'     => 8,
-                    'max'     => 48,
-                    'step'    => 2,
-                    'unit'    => 'px',
-                    'var'     => '--rs-nav-gap',
-                ],
-                'sticky_header' => [
-                    'label'   => 'En-tête collant',
-                    'type'    => 'toggle',
-                    'default' => 'on',
-                    'attr'    => 'rs-sticky',
-                    'on'      => 'on',
-                    'off'     => 'off',
-                    'help'    => 'Garde le menu visible pendant le défilement.',
-                ],
-            ],
-        ],
-
-        /* ================================================================== */
         'hero' => [
             'label'       => 'Hero / slider',
             'icon'        => 'layout',
@@ -371,7 +303,7 @@ return [
                 'hero_slide_1_title'   => ['label' => 'Titre', 'type' => 'text', 'content' => 'hero.slides.0.title', 'max' => 100],
                 'hero_slide_1_text'    => ['label' => 'Texte', 'type' => 'text', 'content' => 'hero.slides.0.text', 'max' => 180],
                 'hero_slide_1_cta'     => ['label' => 'Bouton', 'type' => 'text', 'content' => 'hero.slides.0.cta', 'max' => 40],
-                'hero_slide_1_link'    => ['label' => 'Lien du bouton', 'type' => 'text', 'content' => 'hero.slides.0.link', 'max' => 200, 'help' => '/produits, /categorie/femme…'],
+                'hero_slide_1_link'    => ['label' => 'Lien du bouton', 'type' => 'select', 'content' => 'hero.slides.0.link', 'options_source' => 'links', 'help' => 'Choisissez une page réelle : aucun lien mort.'],
                 'hero_slide_1_theme'   => [
                     'label' => 'Style', 'type' => 'select', 'content' => 'hero.slides.0.theme',
                     'options' => ['light' => 'Fond clair', 'dark' => 'Fond foncé'],
@@ -380,7 +312,7 @@ return [
                 'hero_slide_2_title'   => ['label' => 'Titre', 'type' => 'text', 'content' => 'hero.slides.1.title', 'max' => 100],
                 'hero_slide_2_text'    => ['label' => 'Texte', 'type' => 'text', 'content' => 'hero.slides.1.text', 'max' => 180],
                 'hero_slide_2_cta'     => ['label' => 'Bouton', 'type' => 'text', 'content' => 'hero.slides.1.cta', 'max' => 40],
-                'hero_slide_2_link'    => ['label' => 'Lien du bouton', 'type' => 'text', 'content' => 'hero.slides.1.link', 'max' => 200],
+                'hero_slide_2_link'    => ['label' => 'Lien du bouton', 'type' => 'select', 'content' => 'hero.slides.1.link', 'options_source' => 'links'],
                 'hero_slide_2_theme'   => [
                     'label' => 'Style', 'type' => 'select', 'content' => 'hero.slides.1.theme',
                     'options' => ['light' => 'Fond clair', 'dark' => 'Fond foncé'],
@@ -389,7 +321,7 @@ return [
                 'hero_slide_3_title'   => ['label' => 'Titre', 'type' => 'text', 'content' => 'hero.slides.2.title', 'max' => 100],
                 'hero_slide_3_text'    => ['label' => 'Texte', 'type' => 'text', 'content' => 'hero.slides.2.text', 'max' => 180],
                 'hero_slide_3_cta'     => ['label' => 'Bouton', 'type' => 'text', 'content' => 'hero.slides.2.cta', 'max' => 40],
-                'hero_slide_3_link'    => ['label' => 'Lien du bouton', 'type' => 'text', 'content' => 'hero.slides.2.link', 'max' => 200],
+                'hero_slide_3_link'    => ['label' => 'Lien du bouton', 'type' => 'select', 'content' => 'hero.slides.2.link', 'options_source' => 'links'],
                 'hero_slide_3_theme'   => [
                     'label' => 'Style', 'type' => 'select', 'content' => 'hero.slides.2.theme',
                     'options' => ['light' => 'Fond clair', 'dark' => 'Fond foncé'],
@@ -464,7 +396,7 @@ return [
                 'offer_title' => ['label' => 'Titre', 'type' => 'text', 'content' => 'offer.title', 'max' => 120],
                 'offer_text'  => ['label' => 'Texte', 'type' => 'text', 'content' => 'offer.text', 'max' => 300],
                 'offer_cta'   => ['label' => 'Bouton', 'type' => 'text', 'content' => 'offer.cta', 'max' => 40],
-                'offer_link'  => ['label' => 'Lien du bouton', 'type' => 'text', 'content' => 'offer.link', 'max' => 200],
+                'offer_link'  => ['label' => 'Lien du bouton', 'type' => 'select', 'content' => 'offer.link', 'options_source' => 'links', 'help' => 'Choisissez une page réelle : aucun lien mort.'],
                 'offer_countdown_label' => ['label' => 'Libellé du compte à rebours', 'type' => 'text', 'content' => 'offer.countdown_label', 'max' => 80],
             ],
         ],

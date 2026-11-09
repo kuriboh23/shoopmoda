@@ -14,6 +14,7 @@ declare(strict_types=1);
  * @var array<string, string> $values
  * @var array<string, string> $content
  * @var array<string, array{values: array<string, string>, saved_at: int}> $library
+ * @var array<int, array{key: string, label: string, description: string, values: array<string, string>}> $presets
  * @var array{name: string, updated_at: int} $current
  * @var bool   $applied
  * @var string $previewUrl
@@ -25,6 +26,8 @@ declare(strict_types=1);
  * @var string $themeSaveUrl
  * @var string $themeLoadUrl
  * @var string $themeDeleteUrl
+ * @var string $shopUrl
+ * @var string $snapshotUrl
  * @var string $logoutUrl
  * @var string $siteUrl
  * @var string $csrf
@@ -69,9 +72,21 @@ $renderControl = static function (string $key, array $control, array $values, ar
                     <?= $common ?>
                 ><?= e($value) ?></textarea>
             <?php elseif ($type === 'select'): ?>
+                <?php
+                $options = (array) ($control['options'] ?? []);
+
+                // A saved link may point outside the short page/category list
+                // (for example a product chosen before the list was trimmed).
+                // Keep it selectable, but flag values that look stale.
+                if ($value !== '' && !array_key_exists($value, $options)) {
+                    $options[$value] = str_starts_with($value, '/produit/')
+                        ? 'Lien produit actuel (non listé) : ' . $value
+                        : '⚠ Lien actuel introuvable : ' . $value;
+                }
+                ?>
                 <div class="rs-select-wrap">
                     <select id="<?= e($id) ?>" class="rs-select" <?= $common ?>>
-                        <?php foreach ((array) ($control['options'] ?? []) as $optionValue => $optionLabel): ?>
+                        <?php foreach ($options as $optionValue => $optionLabel): ?>
                             <option value="<?= e((string) $optionValue) ?>"<?= (string) $optionValue === $value ? ' selected' : '' ?>>
                                 <?= e((string) $optionLabel) ?>
                             </option>
@@ -192,6 +207,32 @@ $renderControl = static function (string $key, array $control, array $values, ar
     </div>
     <?php
 };
+
+/**
+ * Render a list of controls, keeping the optional group headings.
+ *
+ * @param array<string, mixed>  $controls
+ * @param array<string, string> $values
+ * @param array<string, string> $content
+ */
+$renderControlList = static function (array $controls, array $values, array $content) use ($renderControl): void {
+    $lastGroup = '';
+
+    foreach ($controls as $controlKey => $control):
+        $control = (array) $control;
+        $group   = (string) ($control['group'] ?? '');
+
+        if ($group !== '' && $group !== $lastGroup):
+            ?>
+            <p class="rs-control-group"><?= e($group) ?></p>
+            <?php
+        endif;
+
+        $lastGroup = $group;
+
+        $renderControl((string) $controlKey, $control, $values, $content);
+    endforeach;
+};
 ?>
 <div
     class="rs-app"
@@ -205,6 +246,7 @@ $renderControl = static function (string $key, array $control, array $values, ar
     data-theme-save-url="<?= e($themeSaveUrl) ?>"
     data-theme-load-url="<?= e($themeLoadUrl) ?>"
     data-theme-delete-url="<?= e($themeDeleteUrl) ?>"
+    data-snapshot-url="<?= e($snapshotUrl) ?>"
     data-store-name="<?= e($storeName) ?>"
 >
     <div class="rs-scrim" data-rs-sidebar-close hidden></div>
@@ -293,11 +335,18 @@ $renderControl = static function (string $key, array $control, array $values, ar
             </div>
 
             <p class="rs-sidebar-note">
-                Les textes sont publiés sur la boutique dès « Enregistrer ». Les couleurs et la mise en page nécessitent « Appliquer au site ».
+                « Enregistrer » publie les textes et réécrit le fichier CSS du site. « Sauvegarde » crée en plus une copie JSON de sécurité.
             </p>
         </div>
 
         <div class="rs-sidebar-foot">
+            <span class="rs-owner-tag">Espace propriétaire</span>
+
+            <a class="rs-foot-link" href="<?= e($shopUrl) ?>">
+                <?= icon('settings', 'icon icon--sm') ?>
+                Infos boutique
+            </a>
+
             <a class="rs-foot-link" href="<?= e($siteUrl) ?>" target="_blank" rel="noopener">
                 <?= icon('eye', 'icon icon--sm') ?>
                 Voir la boutique
@@ -320,7 +369,7 @@ $renderControl = static function (string $key, array $control, array $values, ar
             </button>
 
             <div class="rs-toolbar-title">
-                <p class="rs-eyebrow"><?= e($storeName) ?> · Apparence &amp; contenu</p>
+                <p class="rs-eyebrow"><?= e($storeName) ?> · Espace propriétaire</p>
                 <h1 class="rs-app-title">RESKIN</h1>
             </div>
 
@@ -330,17 +379,72 @@ $renderControl = static function (string $key, array $control, array $values, ar
                     <span data-rs-status-text>Enregistré</span>
                 </span>
 
-                <button type="button" class="rs-btn rs-btn--ghost" data-rs-reset>
-                    <?= icon('refresh', 'icon icon--sm') ?>
-                    <span class="rs-btn-label">Réinitialiser</span>
+                <div class="rs-history" role="group" aria-label="Historique des modifications">
+                    <button
+                        type="button"
+                        class="rs-btn rs-btn--ghost rs-btn--icon"
+                        data-rs-undo
+                        title="Annuler (Ctrl+Z)"
+                        aria-label="Annuler la dernière modification"
+                        aria-keyshortcuts="Control+Z"
+                        disabled
+                    >
+                        <?= icon('arrow-left', 'icon icon--sm') ?>
+                    </button>
+
+                    <button
+                        type="button"
+                        class="rs-btn rs-btn--ghost rs-btn--icon"
+                        data-rs-redo
+                        title="Rétablir (Ctrl+Maj+Z)"
+                        aria-label="Rétablir la modification annulée"
+                        aria-keyshortcuts="Control+Shift+Z Control+Y"
+                        disabled
+                    >
+                        <?= icon('arrow-right', 'icon icon--sm') ?>
+                    </button>
+                </div>
+
+                <button
+                    type="button"
+                    class="rs-btn rs-btn--ghost"
+                    data-rs-snapshot
+                    title="Créer une copie JSON de sécurité (les modifications en attente sont d’abord enregistrées)"
+                >
+                    <?= icon('box', 'icon icon--sm') ?>
+                    <span class="rs-btn-label">Sauvegarde</span>
                 </button>
 
-                <a class="rs-btn rs-btn--ghost" href="<?= e($exportUrl) ?>" data-rs-export>
-                    <?= icon('download', 'icon icon--sm') ?>
-                    <span class="rs-btn-label">Exporter CSS</span>
-                </a>
+                <details class="rs-actions-menu">
+                    <summary class="rs-btn rs-btn--ghost rs-btn--icon" aria-label="Plus d’actions" title="Plus d’actions">
+                        <?= icon('menu', 'icon icon--sm') ?>
+                    </summary>
 
-                <button type="button" class="rs-btn rs-btn--primary" data-rs-save>
+                    <div class="rs-actions-menu-panel">
+                        <a class="rs-menu-action" href="<?= e($exportUrl) ?>" data-rs-export>
+                            <?= icon('download', 'icon icon--sm') ?>
+                            <span>
+                                <strong>Exporter le CSS</strong>
+                                <small>Télécharger le thème généré</small>
+                            </span>
+                        </a>
+
+                        <button type="button" class="rs-menu-action rs-menu-action--danger" data-rs-reset>
+                            <?= icon('refresh', 'icon icon--sm') ?>
+                            <span>
+                                <strong>Réinitialiser le design</strong>
+                                <small>Le contenu et les infos boutique sont conservés</small>
+                            </span>
+                        </button>
+                    </div>
+                </details>
+
+                <button
+                    type="button"
+                    class="rs-btn rs-btn--primary"
+                    data-rs-save
+                    title="Enregistrer et publier le fichier CSS du site"
+                >
                     <?= icon('check-circle', 'icon icon--sm') ?>
                     <span class="rs-btn-label">Enregistrer</span>
                 </button>
@@ -353,10 +457,63 @@ $renderControl = static function (string $key, array $control, array $values, ar
         </header>
 
         <div class="rs-workspace">
+            <?php if ($presets !== []): ?>
+                <section class="rs-starters" aria-labelledby="rs-starters-title">
+                    <div class="rs-starters-head">
+                        <div>
+                            <span class="rs-starters-eyebrow">Départ rapide</span>
+                            <h2 class="rs-starters-title" id="rs-starters-title">Partez d’une ambiance</h2>
+                            <p class="rs-starters-desc">
+                                Des bases complètes, dont le design d’origine. Le contenu reste intact et rien n’est publié avant « Enregistrer ».
+                            </p>
+                        </div>
+
+                        <span class="rs-starters-count"><?= count($presets) ?> styles</span>
+                    </div>
+
+                    <div class="rs-starter-grid">
+                        <?php foreach ($presets as $preset): ?>
+                            <?php $isDefault = $preset['key'] === 'default'; ?>
+                            <button
+                                type="button"
+                                class="rs-starter<?= $isDefault ? ' rs-starter--default' : '' ?>"
+                                data-rs-preset="<?= e($preset['key']) ?>"
+                                data-rs-preset-label="<?= e($preset['label']) ?>"
+                                data-rs-preset-values="<?= e((string) json_encode($preset['values'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>"
+                                aria-pressed="false"
+                                title="<?= $isDefault ? 'Restaurer tous les réglages de design d’origine' : 'Appliquer « ' . e($preset['label']) . ' » comme brouillon' ?>"
+                            >
+                                <span class="rs-starter-top">
+                                    <span class="rs-starter-swatches" aria-hidden="true">
+                                        <i data-rs-swatch-color="<?= e((string) ($preset['values']['primary'] ?? '#704F38')) ?>"></i>
+                                        <i data-rs-swatch-color="<?= e((string) ($preset['values']['accent'] ?? '#704F38')) ?>"></i>
+                                        <i data-rs-swatch-color="<?= e((string) ($preset['values']['background'] ?? '#FFFFFF')) ?>"></i>
+                                    </span>
+                                    <span class="rs-starter-action">
+                                        <?= $isDefault ? 'Restaurer' : 'Choisir' ?>
+                                        <?= icon($isDefault ? 'refresh' : 'arrow-right', 'icon icon--sm') ?>
+                                    </span>
+                                </span>
+
+                                <span class="rs-starter-name"><?= e($preset['label']) ?></span>
+                                <span class="rs-starter-desc"><?= e($preset['description']) ?></span>
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
+            <?php endif; ?>
+
             <section class="rs-panel" aria-label="Personnalisation">
                 <div class="rs-panel-head">
-                    <h2 class="rs-panel-title" data-rs-panel-title><?= e((string) ($categories[$firstKey]['label'] ?? 'Personnalisation')) ?></h2>
-                    <p class="rs-panel-desc" data-rs-panel-desc><?= e((string) ($categories[$firstKey]['description'] ?? '')) ?></p>
+                    <span class="rs-panel-icon" data-rs-panel-icon aria-hidden="true">
+                        <?= icon((string) ($categories[$firstKey]['icon'] ?? 'palette'), 'icon') ?>
+                    </span>
+
+                    <div class="rs-panel-heading-copy">
+                        <span class="rs-panel-eyebrow">Personnalisation</span>
+                        <h2 class="rs-panel-title" data-rs-panel-title><?= e((string) ($categories[$firstKey]['label'] ?? 'Personnalisation')) ?></h2>
+                        <p class="rs-panel-desc" data-rs-panel-desc><?= e((string) ($categories[$firstKey]['description'] ?? '')) ?></p>
+                    </div>
                 </div>
 
                 <?php foreach ($categories as $categoryKey => $category): ?>
@@ -373,23 +530,37 @@ $renderControl = static function (string $key, array $control, array $values, ar
                         <?php endif; ?>
 
                         <?php
-                        $lastGroup = '';
+                        $designControls  = [];
+                        $contentControls = [];
 
-                        foreach (($category['controls'] ?? []) as $controlKey => $control):
-                            $control = (array) $control;
-                            $group   = (string) ($control['group'] ?? '');
-
-                            if ($group !== '' && $group !== $lastGroup):
-                                ?>
-                                <p class="rs-control-group"><?= e($group) ?></p>
-                                <?php
-                            endif;
-
-                            $lastGroup = $group;
-
-                            $renderControl((string) $controlKey, $control, $values, $content);
-                        endforeach;
+                        foreach (($category['controls'] ?? []) as $controlKey => $control) {
+                            if (isset($control['content'])) {
+                                $contentControls[$controlKey] = $control;
+                            } else {
+                                $designControls[$controlKey] = $control;
+                            }
+                        }
                         ?>
+
+                        <?php if ($designControls !== []): ?>
+                            <div class="rs-panel-block">
+                                <div class="rs-block-head">
+                                    <span class="rs-block-title">Design</span>
+                                    <span class="rs-block-count"><?= count($designControls) ?></span>
+                                </div>
+                                <?php $renderControlList($designControls, $values, $content); ?>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if ($contentControls !== []): ?>
+                            <div class="rs-panel-block rs-panel-block--content">
+                                <div class="rs-block-head">
+                                    <span class="rs-block-title">Contenu</span>
+                                    <span class="rs-block-count"><?= count($contentControls) ?></span>
+                                </div>
+                                <?php $renderControlList($contentControls, $values, $content); ?>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
             </section>

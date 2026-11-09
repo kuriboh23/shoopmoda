@@ -42,10 +42,6 @@ $cards = [
             <?= icon('tag', 'icon') ?>
             <span>Gérer les catégories</span>
         </a>
-        <a class="admin-quick-link" href="<?= e(admin_url('reglages')) ?>">
-            <?= icon('settings', 'icon') ?>
-            <span>Réglages boutique</span>
-        </a>
         <a class="admin-quick-link" href="<?= e(admin_url('produits')) ?>">
             <?= icon('box', 'icon') ?>
             <span>Voir le catalogue</span>

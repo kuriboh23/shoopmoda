@@ -51,12 +51,14 @@ body {
 }
 
 /* ---------- Header & navigation ---------------------------------- */
+/* The header is intentionally not in RESKIN: keep the shop defaults even
+   when a theme is applied. */
 .site-header {
-    height: var(--rs-header-h);
-    min-height: var(--rs-header-h);
+    height: var(--rs-header-h, 65px);
+    min-height: var(--rs-header-h, 65px);
     padding-block: 0;
-    background: var(--rs-header-bg);
-    border-bottom-color: var(--rs-header-border);
+    background: var(--rs-header-bg, #FFFFFF);
+    border-bottom-color: var(--rs-header-border, #EDEDED);
 }
 
 body[data-rs-sticky="off"] .site-header {
@@ -64,15 +66,15 @@ body[data-rs-sticky="off"] .site-header {
 }
 
 .brand-wordmark {
-    font-size: var(--rs-logo-size);
+    font-size: var(--rs-logo-size, 18px);
 }
 
 .brand-logo {
-    max-height: calc(var(--rs-logo-size) + 18px);
+    max-height: calc(var(--rs-logo-size, 18px) + 18px);
 }
 
 .nav-link {
-    color: var(--rs-nav-color);
+    color: var(--rs-nav-color, #1F2029);
 }
 
 .nav-link:hover,
@@ -85,7 +87,7 @@ body[data-rs-sticky="off"] .site-header {
 }
 
 .desktop-nav {
-    gap: var(--rs-nav-gap);
+    gap: var(--rs-nav-gap, 22px);
 }
 
 /* ---------- Hero -------------------------------------------------- */

@@ -73,9 +73,6 @@ $router->get($adminPath . '/categories/{id}/modifier', [AdminController::class, 
 $router->post($adminPath . '/categories/{id}/modifier', [AdminController::class, 'updateCategory']);
 $router->post($adminPath . '/categories/{id}/supprimer', [AdminController::class, 'deleteCategory']);
 
-$router->get($adminPath . '/reglages', [AdminController::class, 'settings']);
-$router->post($adminPath . '/reglages', [AdminController::class, 'saveSettings']);
-
 // RESKIN — visual theme editor. Path and password live in config.php.
 $reskinPath = '/' . trim((string) config('reskin_path', 'reskin'), '/');
 
@@ -87,6 +84,9 @@ $router->post($reskinPath . '/connexion', [ReskinController::class, 'login']);
 $router->post($reskinPath . '/deconnexion', [ReskinController::class, 'logout']);
 
 $router->get($reskinPath, [ReskinController::class, 'dashboard']);
+$router->get($reskinPath . '/boutique', [ReskinController::class, 'shopSettings']);
+$router->post($reskinPath . '/boutique', [ReskinController::class, 'saveShopSettings']);
+$router->post($reskinPath . '/sauvegarder-copie', [ReskinController::class, 'snapshot']);
 $router->post($reskinPath . '/enregistrer', [ReskinController::class, 'save']);
 $router->post($reskinPath . '/reinitialiser', [ReskinController::class, 'reset']);
 $router->post($reskinPath . '/appliquer', [ReskinController::class, 'apply']);

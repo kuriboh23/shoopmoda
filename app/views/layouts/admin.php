@@ -24,12 +24,10 @@ $navItems = [
     ['key' => 'dashboard', 'label' => 'Tableau', 'icon' => 'grid', 'url' => admin_url()],
     ['key' => 'products', 'label' => 'Produits', 'icon' => 'box', 'url' => admin_url('produits')],
     ['key' => 'categories', 'label' => 'Catégories', 'icon' => 'tag', 'url' => admin_url('categories')],
-    ['key' => 'settings', 'label' => 'Réglages', 'icon' => 'settings', 'url' => admin_url('reglages')],
 ];
 
-// RESKIN is a separate tool with its own password, but the admin can open it
-// without logging in again (ReskinController accepts the admin session).
-$reskinNav = ['key' => 'reskin', 'label' => 'Apparence', 'icon' => 'palette', 'url' => url('/' . trim((string) config('reskin_path', 'reskin'), '/'))];
+// Client admin: catalogue only. Branding and RESKIN are owner-only and live
+// behind the separate RESKIN password.
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -71,11 +69,6 @@ $reskinNav = ['key' => 'reskin', 'label' => 'Apparence', 'icon' => 'palette', 'u
                             <?= e($item['label']) ?>
                         </a>
                     <?php endforeach; ?>
-
-                    <a class="admin-nav-link" href="<?= e($reskinNav['url']) ?>">
-                        <?= icon($reskinNav['icon'], 'icon icon--sm') ?>
-                        <?= e($reskinNav['label']) ?>
-                    </a>
                 </nav>
 
                 <div class="admin-sidebar-foot">
@@ -139,11 +132,6 @@ $reskinNav = ['key' => 'reskin', 'label' => 'Apparence', 'icon' => 'palette', 'u
                     <span><?= e($item['label']) ?></span>
                 </a>
             <?php endforeach; ?>
-
-            <a class="admin-bottomnav-link" href="<?= e($reskinNav['url']) ?>">
-                <?= icon($reskinNav['icon'], 'icon') ?>
-                <span><?= e($reskinNav['label']) ?></span>
-            </a>
         </nav>
     <?php endif; ?>
 </body>

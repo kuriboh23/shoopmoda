@@ -17,6 +17,7 @@ namespace App\Reskin;
 final class ThemeStore
 {
     private const FILE_NAME = 'themes.json';
+    private const GENERATED_FILE = 'reskin-theme.css';
     private const MAX_THEMES = 30;
 
     /** @var array<string, mixed>|null */
@@ -24,6 +25,9 @@ final class ThemeStore
 
     /** @var array<string, mixed>|null */
     private static ?array $data = null;
+
+    /** @var array<int, array{key: string, label: string, description: string, values: array<string, string>}>|null */
+    private static ?array $presets = null;
 
     /* ==================================================================
        Schema
@@ -130,6 +134,46 @@ final class ThemeStore
         }
 
         return $css . "}\n";
+    }
+
+    /**
+     * Curated starting points for a new look. Each preset is merged over the
+     * schema defaults, then normalized, so choosing one fills every design
+     * control with a complete and valid set of values.
+     *
+     * @return array<int, array{key: string, label: string, description: string, values: array<string, string>}>
+     */
+    public static function presets(): array
+    {
+        if (self::$presets !== null) {
+            return self::$presets;
+        }
+
+        $file = __DIR__ . '/presets.php';
+        $raw = is_file($file) ? require $file : [];
+        $out = [];
+
+        foreach ((array) $raw as $key => $preset) {
+            $key = trim((string) $key);
+            $preset = is_array($preset) ? $preset : [];
+            $label = trim((string) ($preset['label'] ?? ''));
+
+            if ($key === '' || $label === '') {
+                continue;
+            }
+
+            $description = trim((string) ($preset['description'] ?? ''));
+            $overrides = (array) ($preset['values'] ?? []);
+
+            $out[] = [
+                'key'         => $key,
+                'label'       => mb_substr($label, 0, 40),
+                'description' => mb_substr($description, 0, 140),
+                'values'      => self::normalize(array_merge(self::defaults(), $overrides)),
+            ];
+        }
+
+        return self::$presets = $out;
     }
 
     /**
@@ -467,7 +511,8 @@ final class ThemeStore
     }
 
     /**
-     * Load a saved theme into the current draft and return its values.
+     * Load a saved theme into the dashboard draft. Nothing is published and
+     * the generated CSS is untouched until the owner presses Save.
      *
      * @return array<string, string>
      */
@@ -480,14 +525,6 @@ final class ThemeStore
         if (!is_array($theme)) {
             throw new \InvalidArgumentException('Thème introuvable.');
         }
-
-        $data['current'] = [
-            'name'       => $name,
-            'values'     => $theme['values'],
-            'updated_at' => time(),
-        ];
-
-        self::write($data);
 
         return $theme['values'];
     }
@@ -534,6 +571,32 @@ final class ThemeStore
         return $root . '/assets/css/reskin-skin.css';
     }
 
+    private static function generatedFile(): string
+    {
+        $root = defined('PUBLIC_PATH') ? PUBLIC_PATH : dirname(__DIR__, 2);
+
+        return $root . '/assets/css/' . self::GENERATED_FILE;
+    }
+
+    /**
+     * Write the complete stylesheet to a real source file and return its
+     * public-relative path. The storefront then serves this static file, so
+     * the CSS stays exactly as saved until the owner saves RESKIN again.
+     */
+    public static function writeGeneratedCss(): string
+    {
+        $file = self::generatedFile();
+        $css  = self::css();
+
+        if (@file_put_contents($file, $css, LOCK_EX) === false) {
+            throw new \RuntimeException(
+                'Le fichier CSS du site ne peut pas être écrit (assets/css/' . self::GENERATED_FILE . ').'
+            );
+        }
+
+        return 'assets/css/' . self::GENERATED_FILE;
+    }
+
     private static function rgba(string $hex, float $alpha): string
     {
         $hex = ltrim($hex, '#');
@@ -566,15 +629,24 @@ final class ThemeStore
      */
     public static function cssUrl(): string
     {
-        $path = '/' . trim((string) config('reskin_path', 'reskin'), '/') . '/theme.css';
-
-        // PHP's built-in server treats a *.css URL as a static file and does
-        // not run the front controller for it, so local development uses the
-        // query-string form even when pretty URLs are enabled.
-        if (function_exists('pretty_urls') && pretty_urls() && PHP_SAPI !== 'cli-server') {
-            $url = url($path);
+        if (is_file(self::generatedFile())) {
+            // asset() adds a filemtime cache-buster; the file only changes on
+            // an explicit RESKIN save.
+            return asset('css/' . self::GENERATED_FILE);
         } else {
-            $url = rtrim(base_path(), '/') . '/?p=' . rawurlencode($path);
+            // Fallback for an installation where the CSS source could not be
+            // written yet: generate it on demand instead of leaving the shop
+            // unstyled.
+            $path = '/' . trim((string) config('reskin_path', 'reskin'), '/') . '/theme.css';
+
+            // PHP's built-in server treats a *.css URL as a static file and
+            // does not run the front controller for it, so local development
+            // uses the query-string form even with pretty URLs enabled.
+            if (function_exists('pretty_urls') && pretty_urls() && PHP_SAPI !== 'cli-server') {
+                $url = url($path);
+            } else {
+                $url = rtrim(base_path(), '/') . '/?p=' . rawurlencode($path);
+            }
         }
 
         $separator = str_contains($url, '?') ? '&' : '?';

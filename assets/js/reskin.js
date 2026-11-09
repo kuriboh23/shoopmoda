@@ -35,6 +35,8 @@
     var applyButton = app.querySelector('[data-rs-apply]');
     var applyLabel = app.querySelector('[data-rs-apply-label]');
     var applyState = app.querySelector('[data-rs-apply-state]');
+    var undoButton = app.querySelector('[data-rs-undo]');
+    var redoButton = app.querySelector('[data-rs-redo]');
     var themeNameInput = app.querySelector('[data-rs-theme-name]');
     var themeList = app.querySelector('[data-rs-theme-list]');
     var themeEmpty = app.querySelector('[data-rs-theme-empty]');
@@ -45,6 +47,12 @@
     var busy = false;
     var toastTimer = null;
     var frameTimer = null;
+    var historyStates = [];
+    var historyIndex = -1;
+    var historyTimer = null;
+    var restoringHistory = false;
+    var HISTORY_LIMIT = 60;
+    var HISTORY_DELAY = 350;
 
     var endpoints = {
         save: app.getAttribute('data-save-url'),
@@ -53,7 +61,8 @@
         disable: app.getAttribute('data-disable-url'),
         themeSave: app.getAttribute('data-theme-save-url'),
         themeLoad: app.getAttribute('data-theme-load-url'),
-        themeDelete: app.getAttribute('data-theme-delete-url')
+        themeDelete: app.getAttribute('data-theme-delete-url'),
+        snapshot: app.getAttribute('data-snapshot-url')
     };
 
     /* ---------------------------------------------------------------
@@ -243,15 +252,144 @@
         setStatus('saved', 'Enregistré');
     }
 
+    /* ---------------------------------------------------------------
+       Undo / redo history (theme controls and page content together)
+       --------------------------------------------------------------- */
+    function snapshotState() {
+        return {
+            values: values(),
+            content: contentValues()
+        };
+    }
+
+    function sameState(first, second) {
+        return JSON.stringify(first) === JSON.stringify(second);
+    }
+
+    function recordHistory() {
+        if (restoringHistory) {
+            return;
+        }
+
+        var state = snapshotState();
+        var current = historyStates[historyIndex];
+
+        if (current && sameState(current, state)) {
+            return;
+        }
+
+        historyStates = historyStates.slice(0, historyIndex + 1);
+        historyStates.push(state);
+
+        if (historyStates.length > HISTORY_LIMIT) {
+            historyStates.shift();
+        }
+
+        historyIndex = historyStates.length - 1;
+        updateHistoryButtons();
+    }
+
+    function scheduleHistory() {
+        if (restoringHistory) {
+            return;
+        }
+
+        if (historyTimer) {
+            window.clearTimeout(historyTimer);
+        }
+
+        historyTimer = window.setTimeout(function () {
+            historyTimer = null;
+            recordHistory();
+        }, HISTORY_DELAY);
+    }
+
+    function flushHistory() {
+        if (historyTimer) {
+            window.clearTimeout(historyTimer);
+            historyTimer = null;
+        }
+
+        recordHistory();
+    }
+
+    function resetHistory() {
+        if (historyTimer) {
+            window.clearTimeout(historyTimer);
+            historyTimer = null;
+        }
+
+        historyStates = [snapshotState()];
+        historyIndex = 0;
+        updateHistoryButtons();
+    }
+
+    function updateHistoryButtons() {
+        if (undoButton) {
+            undoButton.disabled = busy || historyIndex <= 0;
+        }
+
+        if (redoButton) {
+            redoButton.disabled = busy || historyIndex >= historyStates.length - 1;
+        }
+    }
+
+    function restoreHistory(index) {
+        if (index < 0 || index >= historyStates.length) {
+            return;
+        }
+
+        historyIndex = index;
+        restoringHistory = true;
+
+        var state = historyStates[index];
+        setValues(state.values);
+        setContentValues(state.content);
+
+        restoringHistory = false;
+
+        markDirty();
+        clearPresetSelection();
+        applyPreview();
+        applyContentPreview();
+        updateHistoryButtons();
+    }
+
+    function undo() {
+        if (busy) {
+            return;
+        }
+
+        flushHistory();
+
+        if (historyIndex > 0) {
+            restoreHistory(historyIndex - 1);
+        }
+    }
+
+    function redo() {
+        if (busy) {
+            return;
+        }
+
+        flushHistory();
+
+        if (historyIndex < historyStates.length - 1) {
+            restoreHistory(historyIndex + 1);
+        }
+    }
+
     function setBusy(state) {
         busy = state;
 
         Array.prototype.forEach.call(
-            app.querySelectorAll('[data-rs-save], [data-rs-reset], [data-rs-apply], [data-rs-theme-save]'),
+            app.querySelectorAll('[data-rs-save], [data-rs-reset], [data-rs-apply], [data-rs-theme-save], [data-rs-snapshot], [data-rs-undo], [data-rs-redo], [data-rs-preset]'),
             function (button) {
                 button.disabled = state;
             }
         );
+
+        updateHistoryButtons();
     }
 
     function post(url, payload) {
@@ -441,6 +579,8 @@
             updateOutput(input);
             updateSwitchText(input);
             markDirty();
+            clearPresetSelection();
+            scheduleHistory();
             schedulePreview();
         });
 
@@ -448,6 +588,8 @@
             updateOutput(input);
             updateSwitchText(input);
             markDirty();
+            clearPresetSelection();
+            scheduleHistory();
             applyPreview();
         });
 
@@ -467,6 +609,8 @@
     Array.prototype.forEach.call(app.querySelectorAll('[data-rs-hex]'), function (textInput) {
         textInput.addEventListener('input', function () {
             markDirty();
+            clearPresetSelection();
+            scheduleHistory();
             syncColorFromText(textInput);
         });
 
@@ -493,6 +637,7 @@
     var tabButtons = Array.prototype.slice.call(app.querySelectorAll('[data-rs-tab]'));
     var panelTitle = app.querySelector('[data-rs-panel-title]');
     var panelDesc = app.querySelector('[data-rs-panel-desc]');
+    var panelIcon = app.querySelector('[data-rs-panel-icon]');
 
     function activateTab(key) {
         tabButtons.forEach(function (button) {
@@ -518,6 +663,15 @@
 
         if (panelDesc && panel) {
             panelDesc.textContent = panel.getAttribute('data-desc') || '';
+        }
+
+        if (panelIcon && activeButton) {
+            var iconSource = activeButton.querySelector('.icon');
+
+            if (iconSource) {
+                panelIcon.textContent = '';
+                panelIcon.appendChild(iconSource.cloneNode(true));
+            }
         }
 
         if (activeButton) {
@@ -644,6 +798,48 @@
     /* ---------------------------------------------------------------
        Save / reset / apply
        --------------------------------------------------------------- */
+    if (undoButton) {
+        undoButton.addEventListener('click', undo);
+    }
+
+    if (redoButton) {
+        redoButton.addEventListener('click', redo);
+    }
+
+    document.addEventListener('keydown', function (event) {
+        if (!(event.ctrlKey || event.metaKey)) {
+            return;
+        }
+
+        var key = String(event.key || '').toLowerCase();
+
+        if (key !== 'z' && key !== 'y') {
+            return;
+        }
+
+        var target = event.target;
+        var editable = target && (
+            target.isContentEditable ||
+            target.tagName === 'INPUT' ||
+            target.tagName === 'TEXTAREA' ||
+            target.tagName === 'SELECT'
+        );
+
+        // Keep the browser's native text undo while typing in a field. The
+        // toolbar buttons still undo the whole form at any time.
+        if (editable) {
+            return;
+        }
+
+        event.preventDefault();
+
+        if (key === 'y' || event.shiftKey) {
+            redo();
+        } else {
+            undo();
+        }
+    });
+
     function persist() {
         setStatus('saving', 'Enregistrement…');
 
@@ -652,12 +848,22 @@
                 throw new Error((data && data.error) || 'Enregistrement impossible.');
             }
 
+            if (data.values) {
+                setValues(data.values);
+                applyPreview();
+            }
+
             if (data.content) {
                 setContentValues(data.content);
                 applyContentPreview();
             }
 
+            if (typeof data.applied !== 'undefined') {
+                setAppliedUi(!!data.applied);
+            }
+
             markSaved();
+            resetHistory();
 
             return data;
         });
@@ -704,7 +910,14 @@
 
                 setValues(data.values || {});
                 setContentValues(data.content || {});
+
+                if (typeof data.applied !== 'undefined') {
+                    setAppliedUi(!!data.applied);
+                }
+
+                clearPresetSelection();
                 markSaved();
+                resetHistory();
                 applyPreview();
                 applyContentPreview();
                 toast(data.message || 'Réglages d’origine restaurés.');
@@ -761,6 +974,35 @@
                 toast(data.message || (applied ? 'Styles retirés.' : 'Styles appliqués.'));
             }).catch(function (error) {
                 toast(error.message || 'Action impossible.', true);
+            }).finally(function () {
+                setBusy(false);
+            });
+        });
+    }
+
+    /* Permanent JSON copy: save pending edits first, then write the snapshot. */
+    var snapshotButton = app.querySelector('[data-rs-snapshot]');
+
+    if (snapshotButton) {
+        snapshotButton.addEventListener('click', function () {
+            if (busy) {
+                return;
+            }
+
+            setBusy(true);
+
+            var task = dirty ? persist() : Promise.resolve();
+
+            task.then(function () {
+                return post(endpoints.snapshot, {});
+            }).then(function (data) {
+                if (!data || data.ok !== true) {
+                    throw new Error((data && data.error) || 'Sauvegarde impossible.');
+                }
+
+                toast(data.message || ('Copie enregistrée : ' + data.file));
+            }).catch(function (error) {
+                toast(error.message || 'Sauvegarde impossible.', true);
             }).finally(function () {
                 setBusy(false);
             });
@@ -876,9 +1118,11 @@
                     }
 
                     setValues(data.values || {});
-                    markSaved();
+                    clearPresetSelection();
+                    markDirty();
+                    flushHistory();
                     applyPreview();
-                    toast(data.message || 'Style chargé.');
+                    toast(data.message || 'Style chargé. Enregistrez pour publier le CSS.');
                 }).catch(function (error) {
                     toast(error.message || 'Chargement impossible.', true);
                 }).finally(function () {
@@ -986,14 +1230,61 @@
         });
     }
 
+    /* ---------------------------------------------------------------
+       Ready-made style starters
+       --------------------------------------------------------------- */
+    var presetButtons = Array.prototype.slice.call(app.querySelectorAll('[data-rs-preset]'));
+
+    function clearPresetSelection() {
+        presetButtons.forEach(function (button) {
+            button.classList.remove('is-active');
+            button.setAttribute('aria-pressed', 'false');
+        });
+    }
+
+    presetButtons.forEach(function (button) {
+        button.addEventListener('click', function () {
+            if (busy) {
+                return;
+            }
+
+            var values;
+
+            try {
+                values = JSON.parse(button.getAttribute('data-rs-preset-values') || '{}');
+            } catch (error) {
+                toast('Ce style n’a pas pu être chargé.', true);
+                return;
+            }
+
+            if (!values || typeof values !== 'object' || Array.isArray(values)) {
+                toast('Ce style n’a pas pu être chargé.', true);
+                return;
+            }
+
+            setValues(values);
+            markDirty();
+            flushHistory();
+            applyPreview();
+            clearPresetSelection();
+            button.classList.add('is-active');
+            button.setAttribute('aria-pressed', 'true');
+
+            var label = button.getAttribute('data-rs-preset-label') || 'Style';
+            toast('Style « ' + label + ' » chargé. Enregistrez pour publier le CSS.');
+        });
+    });
+
     contentInputs.forEach(function (input) {
         input.addEventListener('input', function () {
             markDirty();
+            scheduleHistory();
             applyContentPreview();
         });
 
         input.addEventListener('change', function () {
             markDirty();
+            scheduleHistory();
             applyContentPreview();
         });
     });
@@ -1005,6 +1296,7 @@
     refreshThemeMeta();
     applyPreview();
     applyContentPreview();
+    resetHistory();
 
     window.addEventListener('message', function (event) {
         if (event.source === preview) {

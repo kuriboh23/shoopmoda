@@ -13,11 +13,11 @@ declare(strict_types=1);
         <?= icon('palette', 'icon') ?>
     </span>
 
-    <p class="rs-auth-eyebrow">Éditeur de thème</p>
+    <p class="rs-auth-eyebrow">Espace propriétaire</p>
     <h1 class="rs-auth-title">RESKIN</h1>
     <p class="rs-auth-text">
-        Personnalisez les couleurs, la typographie et la mise en page de la
-        boutique, sans toucher au CSS.
+        Design, contenu et informations de la boutique. Cet espace est séparé
+        de la gestion client (produits et catégories).
     </p>
 
     <?php if (!empty($error)): ?>

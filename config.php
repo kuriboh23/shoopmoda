@@ -79,11 +79,13 @@ return [
 
 
     // ======================================================================
-    // B2. RESKIN — VISUAL THEME EDITOR
+    // B2. RESKIN — OWNER-ONLY DESIGN & STORE INFO
     // ======================================================================
-    // The editor is at /reskin. It has its own password so a client can
-    // change colours and typography without receiving the admin password.
-    // Nothing it saves changes the shop until "Appliquer au site" is used.
+    // The editor is at /reskin, with its own password. It contains the design,
+    // the page content and the private shop identity (logo, WhatsApp, delivery,
+    // Instagram). The client admin only opens products and categories.
+    // "Enregistrer" writes assets/css/reskin-theme.css and publishes it;
+    // that file only changes when RESKIN is saved again.
 
     'reskin_path'     => 'reskin',
     'reskin_password' => 'thiccolight',

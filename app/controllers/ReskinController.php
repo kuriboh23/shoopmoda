@@ -9,18 +9,19 @@ use App\Core\View;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\SiteContent;
+use App\Reskin\ShopSettings;
 use App\Reskin\ThemeStore;
 
 /**
  * RESKIN — visual theme editor.
  *
- * The dashboard is protected by its own password (reskin_password in
- * config.php). An already-connected admin is accepted too, so the tool can be
- * opened from the shop administration without a second login.
+ * Owner-only: the dashboard is protected by its own password
+ * (reskin_password in config.php). A client admin session deliberately does
+ * not open it, so branding and store identity stay private.
  *
  * Every mutation returns JSON: the dashboard never reloads while editing.
- * The generated stylesheet is served by themeCss() and is the only public
- * route of the module.
+ * Saving writes assets/css/reskin-theme.css, which the storefront loads as a
+ * normal static file. themeCss() remains the on-demand fallback.
  */
 final class ReskinController
 {
@@ -97,10 +98,11 @@ final class ReskinController
         View::render('reskin/dashboard', [
             'title'       => 'RESKIN — Éditeur de thème',
             'noindex'     => true,
-            'schema'      => ThemeStore::schema(),
+            'schema'      => $this->schemaWithLinks(),
             'values'      => ThemeStore::values(),
             'content'     => SiteContent::flat(),
             'library'     => ThemeStore::library(),
+            'presets'     => ThemeStore::presets(),
             'current'     => ThemeStore::currentInfo(),
             'applied'     => ThemeStore::isApplied(),
             'previewUrl'  => url($this->path('apercu')),
@@ -112,10 +114,115 @@ final class ReskinController
             'themeSaveUrl' => url($this->path('themes')),
             'themeLoadUrl' => url($this->path('themes/charger')),
             'themeDeleteUrl' => url($this->path('themes/supprimer')),
+            'shopUrl'     => url($this->path('boutique')),
+            'snapshotUrl' => url($this->path('sauvegarder-copie')),
             'logoutUrl'   => url($this->path('deconnexion')),
             'siteUrl'     => url('/'),
             'csrf'        => csrf_token(),
         ], 'layouts/reskin');
+    }
+
+    /**
+     * Owner-only store identity. Deliberately outside the client admin: the
+     * client keeps products and categories, never branding or pricing rules.
+     */
+    public function shopSettings(): void
+    {
+        $this->requireAuth();
+
+        View::render('reskin/shop', [
+            'title'      => 'Infos boutique — RESKIN',
+            'noindex'    => true,
+            'values'     => ShopSettings::values(),
+            'errors'     => [],
+            'saved'      => false,
+            'shopUrl'    => url($this->path('boutique')),
+            'backUrl'    => url($this->path()),
+            'siteUrl'    => url('/'),
+            'logoutUrl'  => url($this->path('deconnexion')),
+        ], 'layouts/reskin');
+    }
+
+    public function saveShopSettings(): void
+    {
+        $this->requireAuth();
+
+        if (!csrf_verify($_POST['_csrf'] ?? null)) {
+            flash('error', 'Session expirée, merci de réessayer.');
+            redirect($this->path('boutique'));
+        }
+
+        $result = ShopSettings::save($_POST, $_FILES);
+
+        if ($result['saved']) {
+            flash('success', 'Infos boutique enregistrées. Le site est mis à jour immédiatement.');
+            redirect($this->path('boutique'));
+        }
+
+        http_response_code(422);
+
+        View::render('reskin/shop', [
+            'title'      => 'Infos boutique — RESKIN',
+            'noindex'    => true,
+            'values'     => $result['values'],
+            'errors'     => $result['errors'],
+            'saved'      => false,
+            'shopUrl'    => url($this->path('boutique')),
+            'backUrl'    => url($this->path()),
+            'siteUrl'    => url('/'),
+            'logoutUrl'  => url($this->path('deconnexion')),
+        ], 'layouts/reskin');
+    }
+
+    /**
+     * Permanent JSON copy of everything RESKIN can change: theme, content and
+     * shop identity. Stored under storage/reskin/snapshots/ (kept out of git).
+     */
+    public function snapshot(): void
+    {
+        $this->requireAuth();
+        $this->requireCsrfJson();
+
+        $directory = STORAGE_PATH . '/reskin/snapshots';
+
+        if (!is_dir($directory) && !@mkdir($directory, 0775, true) && !is_dir($directory)) {
+            $this->json(['ok' => false, 'error' => 'Dossier de sauvegarde inaccessible.'], 500);
+        }
+
+        $name = 'reglages-' . date('Ymd-His') . '.json';
+
+        $payload = [
+            'created_at' => date('c'),
+            'site'       => store_name(),
+            'theme'      => [
+                'current' => ThemeStore::currentInfo(),
+                'values'  => ThemeStore::values(),
+                'library' => ThemeStore::library(),
+                'applied' => ThemeStore::isApplied(),
+            ],
+            'content'    => SiteContent::all(),
+            'shop'       => ShopSettings::values(),
+        ];
+
+        $json = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+        if ($json === false || @file_put_contents($directory . '/' . $name, $json, LOCK_EX) === false) {
+            $this->json(['ok' => false, 'error' => 'Copie impossible à écrire.'], 500);
+        }
+
+        // Keep the folder tidy forever: 20 most recent copies are enough.
+        $copies = glob($directory . '/reglages-*.json') ?: [];
+        sort($copies);
+
+        foreach (array_slice($copies, 0, max(0, count($copies) - 20)) as $old) {
+            @unlink($old);
+        }
+
+        $this->json([
+            'ok'      => true,
+            'file'    => 'storage/reskin/snapshots/' . $name,
+            'message' => 'Copie permanente enregistrée dans storage/reskin/snapshots/.',
+        ]);
     }
 
     /**
@@ -219,13 +326,20 @@ final class ReskinController
                 SiteContent::applyFlat($content);
             }
 
+            // Saving is the publishing action: write the real CSS source and
+            // activate it. Nothing else rewrites this file unless the owner
+            // saves (or explicitly resets) from RESKIN.
+            $css = ThemeStore::writeGeneratedCss();
+            ThemeStore::setApplied(true);
+
             $this->json([
                 'ok'      => true,
                 'values'  => $values,
                 'content' => SiteContent::flat(),
                 'info'    => ThemeStore::currentInfo(),
-                'applied' => ThemeStore::isApplied(),
-                'message' => 'Design et contenu enregistrés.',
+                'applied' => true,
+                'css'     => $css,
+                'message' => 'Design et contenu enregistrés dans le CSS du site.',
             ]);
         } catch (\Throwable $exception) {
             $this->json(['ok' => false, 'error' => $exception->getMessage()], 500);
@@ -239,6 +353,10 @@ final class ReskinController
 
         try {
             $values = ThemeStore::resetCurrent();
+
+            if (ThemeStore::isApplied()) {
+                ThemeStore::writeGeneratedCss();
+            }
 
             $this->json([
                 'ok'      => true,
@@ -259,12 +377,13 @@ final class ReskinController
         $this->requireCsrfJson();
 
         try {
+            ThemeStore::writeGeneratedCss();
             ThemeStore::setApplied(true);
 
             $this->json([
                 'ok'      => true,
                 'applied' => true,
-                'message' => 'Thème appliqué à la boutique.',
+                'message' => 'Thème appliqué. Le fichier CSS du site est à jour.',
             ]);
         } catch (\Throwable $exception) {
             $this->json(['ok' => false, 'error' => $exception->getMessage()], 500);
@@ -409,10 +528,71 @@ final class ReskinController
     private function isLoggedIn(): bool
     {
         $reskin = Session::get(self::SESSION_KEY);
-        $admin  = Session::get('admin');
 
-        return (is_array($reskin) && !empty($reskin['at']))
-            || (is_array($admin) && !empty($admin['email']));
+        // Owner-only. The client admin session deliberately does NOT open
+        // RESKIN: products/categories and branding are separate jobs.
+        return is_array($reskin) && !empty($reskin['at']);
+    }
+
+    /**
+     * Replace every `options_source => links` field with a dropdown built
+     * from the real shop: fixed pages and active categories. Products are
+     * deliberately excluded so the list stays short and easy to scan.
+     *
+     * @return array<string, mixed>
+     */
+    private function schemaWithLinks(): array
+    {
+        $schema  = ThemeStore::schema();
+        $options = null;
+
+        foreach (($schema['categories'] ?? []) as $categoryKey => $category) {
+            foreach (($category['controls'] ?? []) as $controlKey => $control) {
+                if (($control['options_source'] ?? '') !== 'links') {
+                    continue;
+                }
+
+                if ($options === null) {
+                    $options = $this->linkOptions();
+                }
+
+                $schema['categories'][$categoryKey]['controls'][$controlKey]['type'] = 'select';
+                $schema['categories'][$categoryKey]['controls'][$controlKey]['options'] = $options;
+            }
+        }
+
+        return $schema;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function linkOptions(): array
+    {
+        $options = [
+            ''           => 'Aucun lien (bouton inactif)',
+            '/'          => 'Accueil',
+            '/produits'  => 'Tous les produits',
+            '/promotions' => 'Promotions',
+            '/favoris'   => 'Mes favoris',
+            '/panier'    => 'Mon panier',
+        ];
+
+        try {
+            foreach (Category::all() as $category) {
+                $slug = trim((string) ($category['slug'] ?? ''));
+
+                if ($slug === '') {
+                    continue;
+                }
+
+                $options['/categorie/' . $slug] = 'Catégorie — ' . (string) ($category['name'] ?? $slug);
+            }
+        } catch (\Throwable) {
+            // The fixed pages above keep the dropdown usable without a DB.
+        }
+
+        return $options;
     }
 
     private function requireAuth(): void

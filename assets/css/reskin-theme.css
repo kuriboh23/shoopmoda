@@ -1,0 +1,441 @@
+/* RESKIN — theme generated 2026-11-09 15:45 */
+/* Modify it from the RESKIN dashboard, not by hand. */
+
+:root {
+    --primary: #236B7A;
+    --primary-soft: rgba(35, 107, 122, 0.08);
+    --rs-offer-glow: rgba(35, 107, 122, 0.18);
+    --rs-bg: #F7FBFC;
+    --rs-text: #14252A;
+    --rs-accent: #2E8B9A;
+    --rs-font: "Gill Sans", "Segoe UI", Calibri, system-ui, sans-serif;
+    --rs-body-size: 15px;
+    --rs-line-height: 1.55;
+    --rs-heading-size: 18px;
+    --rs-heading-weight: 600;
+    --rs-wrap: 1200px;
+    --rs-section-space: 28px;
+    --radius: 14px;
+    --rs-ann-bg: #EAF4F6;
+    --rs-ann-text: #42646C;
+    --rs-ann-border: #D2E6EA;
+    --rs-ann-height: 38px;
+    --rs-hero-light-bg: #DDEEF1;
+    --rs-hero-dark-bg: #0F2D36;
+    --rs-hero-dark-bg-2: #184653;
+    --rs-hero-radius: 18px;
+    --rs-hero-title-size: 26px;
+    --rs-hero-eyebrow: #236B7A;
+    --rs-hero-dark-eyebrow: #91CFD8;
+    --rs-hero-light-title: #14252A;
+    --rs-hero-dark-title: #F3FBFD;
+    --rs-hero-light-text: #536D73;
+    --rs-hero-dark-text: #BFDDE2;
+    --rs-offer-bg: #E8F4F6;
+    --rs-offer-border: #CDE5E9;
+    --rs-offer-radius: 18px;
+    --rs-offer-title: #14252A;
+    --rs-offer-title-size: 22px;
+    --rs-offer-text: #536D73;
+    --rs-chip-bg: #FFFFFF;
+    --rs-chip-border: #CDE5E9;
+    --rs-chip-text: #14252A;
+    --rs-chip-icon: #236B7A;
+    --rs-grid-cols: 4;
+    --rs-gap: 14px;
+    --rs-card-bg: #FFFFFF;
+    --rs-card-border: #D8E9EC;
+    --rs-border-width: 1px;
+    --rs-card-radius: 16px;
+    --rs-shadow: 0 10px 28px rgba(27, 26, 24, 0.08);
+    --rs-image-radius: 10px;
+    --rs-image-ratio: 4 / 5;
+    --rs-price: #14252A;
+    --rs-why-bg: #EDF7F8;
+    --rs-why-card-bg: #FFFFFF;
+    --rs-why-line: #D2E6EA;
+    --rs-why-title: #14252A;
+    --rs-why-text: #536D73;
+    --rs-why-icon-bg: #DFF0F3;
+    --rs-why-icon: #236B7A;
+    --rs-why-radius: 18px;
+    --rs-footer-bg: #0F2D36;
+    --rs-footer-heading: #F3FBFD;
+    --rs-footer-text: #AFC9CF;
+    --rs-footer-link: #C7E0E5;
+    --rs-footer-accent: #91CFD8;
+    --rs-btn-radius: 12px;
+    --rs-btn-pad-x: 22px;
+    --rs-btn-bg: #14252A;
+    --rs-btn-soft: rgba(20, 37, 42, 0.12);
+    --rs-btn-text: #FFFFFF;
+    --rs-btn-hover: #236B7A;
+}
+
+/* ==================================================================
+   RESKIN — per-section skin
+   ------------------------------------------------------------------
+   Loaded by the live preview and appended to the generated stylesheet.
+   Every value comes from a --rs-* token written by the dashboard, so the
+   owner can restyle one section without touching the others.
+
+   It is only loaded on the storefront when a theme has been applied
+   explicitly; without that, app.css is used untouched. The defaults of
+   every control match app.css, so applying a fresh theme changes nothing.
+   ================================================================== */
+
+/* ---------- Global ------------------------------------------------ */
+body {
+    background: var(--rs-bg);
+    color: var(--rs-text);
+    font-family: var(--rs-font);
+    font-size: var(--rs-body-size);
+    line-height: var(--rs-line-height);
+}
+
+.wrap {
+    max-width: var(--rs-wrap);
+}
+
+.section {
+    margin-top: var(--rs-section-space);
+}
+
+.section-title {
+    font-size: var(--rs-heading-size);
+    font-weight: var(--rs-heading-weight);
+}
+
+.eyebrow,
+.section-link,
+.product-category {
+    color: var(--rs-accent);
+}
+
+/* ---------- Announcement bar ------------------------------------- */
+.announcement-bar {
+    height: var(--rs-ann-height);
+    background: var(--rs-ann-bg);
+    border-bottom-color: var(--rs-ann-border);
+    color: var(--rs-ann-text);
+}
+
+.announcement-item {
+    color: var(--rs-ann-text);
+}
+
+/* ---------- Header & navigation ---------------------------------- */
+/* The header is intentionally not in RESKIN: keep the shop defaults even
+   when a theme is applied. */
+.site-header {
+    height: var(--rs-header-h, 65px);
+    min-height: var(--rs-header-h, 65px);
+    padding-block: 0;
+    background: var(--rs-header-bg, #FFFFFF);
+    border-bottom-color: var(--rs-header-border, #EDEDED);
+}
+
+body[data-rs-sticky="off"] .site-header {
+    position: static;
+}
+
+.brand-wordmark {
+    font-size: var(--rs-logo-size, 18px);
+}
+
+.brand-logo {
+    max-height: calc(var(--rs-logo-size, 18px) + 18px);
+}
+
+.nav-link {
+    color: var(--rs-nav-color, #1F2029);
+}
+
+.nav-link:hover,
+.nav-link.is-active {
+    color: var(--rs-accent);
+}
+
+.nav-link.is-active::after {
+    background: var(--rs-accent);
+}
+
+.desktop-nav {
+    gap: var(--rs-nav-gap, 22px);
+}
+
+/* ---------- Hero -------------------------------------------------- */
+.hero-slide {
+    border-radius: var(--rs-hero-radius);
+}
+
+.hero-slide--light {
+    background: var(--rs-hero-light-bg);
+}
+
+.hero-slide--dark {
+    background: linear-gradient(135deg, var(--rs-hero-dark-bg) 0%, var(--rs-hero-dark-bg-2) 100%);
+}
+
+.hero-title {
+    color: var(--rs-hero-light-title);
+    font-size: var(--rs-hero-title-size);
+}
+
+.hero-slide--dark .hero-title {
+    color: var(--rs-hero-dark-title);
+}
+
+.hero-eyebrow {
+    color: var(--rs-hero-eyebrow);
+}
+
+.hero-slide--dark .hero-eyebrow {
+    color: var(--rs-hero-dark-eyebrow);
+}
+
+.hero-text {
+    color: var(--rs-hero-light-text);
+}
+
+.hero-slide--dark .hero-text {
+    color: var(--rs-hero-dark-text);
+}
+
+/* ---------- Offer panel ------------------------------------------ */
+.offer-panel {
+    border-color: var(--rs-offer-border);
+    border-radius: var(--rs-offer-radius);
+    background:
+        radial-gradient(120% 130% at 100% 0%, var(--rs-offer-glow), transparent 58%),
+        linear-gradient(135deg, var(--rs-offer-bg) 0%, #FCF9F5 55%, #FFFFFF 100%);
+}
+
+body[data-rs-offer="solid"] .offer-panel {
+    background: var(--rs-offer-bg);
+}
+
+body[data-rs-offer="outline"] .offer-panel {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--rs-offer-border);
+}
+
+.offer-title {
+    color: var(--rs-offer-title);
+    font-size: var(--rs-offer-title-size);
+}
+
+.offer-text {
+    color: var(--rs-offer-text);
+}
+
+/* ---------- Category chips --------------------------------------- */
+.home-chip {
+    border-color: var(--rs-chip-border);
+    background: var(--rs-chip-bg);
+    color: var(--rs-chip-text);
+}
+
+.home-chip .icon {
+    color: var(--rs-chip-icon);
+}
+
+body[data-rs-chip="pill"] .home-chip {
+    border-radius: 999px;
+}
+
+body[data-rs-chip="soft"] .home-chip {
+    border-radius: 10px;
+}
+
+body[data-rs-chip="square"] .home-chip {
+    border-radius: 0;
+}
+
+/* ---------- Product grid ----------------------------------------- */
+.product-grid {
+    gap: var(--rs-gap);
+}
+
+@media (min-width: 768px) {
+    .product-grid {
+        gap: calc(var(--rs-gap) + 4px);
+    }
+}
+
+@media (max-width: 359px) {
+    .product-grid {
+        gap: max(6px, calc(var(--rs-gap) - 3px));
+    }
+}
+
+@media (min-width: 1024px) {
+    .product-grid {
+        grid-template-columns: repeat(var(--rs-grid-cols), minmax(0, 1fr));
+    }
+}
+
+.product-card {
+    border-radius: var(--rs-card-radius);
+    background: var(--rs-card-bg);
+}
+
+body[data-rs-card="elevated"] .product-card {
+    border: var(--rs-border-width) solid var(--rs-card-border);
+    box-shadow: var(--rs-shadow);
+}
+
+body[data-rs-card="outlined"] .product-card {
+    border: var(--rs-border-width) solid var(--rs-card-border);
+    box-shadow: none;
+}
+
+body[data-rs-card="flat"] .product-card {
+    border: 0;
+    box-shadow: none;
+}
+
+body[data-rs-hover="on"] .product-card:hover {
+    transform: translateY(-2px);
+}
+
+/* Keep the original hover depth when the owner did not ask for another one. */
+body[data-rs-hover="on"][data-rs-card="elevated"] .product-card:hover {
+    border-color: #D9C8B6;
+    box-shadow: 0 12px 26px rgba(27, 26, 24, 0.09);
+}
+
+body[data-rs-hover="off"] .product-card:hover {
+    transform: none;
+}
+
+.product-media {
+    aspect-ratio: var(--rs-image-ratio);
+}
+
+.product-media,
+.product-media img {
+    border-radius: var(--rs-image-radius);
+}
+
+.product-card .price.current {
+    color: var(--rs-price);
+}
+
+/* ---------- Why us ----------------------------------------------- */
+.why-section {
+    background: var(--rs-why-bg);
+}
+
+.why-grid {
+    background: var(--rs-why-line);
+    border-color: var(--rs-why-line);
+    border-radius: var(--rs-why-radius);
+}
+
+.why-card {
+    background: var(--rs-why-card-bg);
+}
+
+.why-title {
+    color: var(--rs-why-title);
+}
+
+.why-text {
+    color: var(--rs-why-text);
+}
+
+.why-icon {
+    background: var(--rs-why-icon-bg);
+    color: var(--rs-why-icon);
+}
+
+.why-icon .icon {
+    color: var(--rs-why-icon);
+}
+
+/* ---------- Footer ----------------------------------------------- */
+.site-footer {
+    background: var(--rs-footer-bg);
+}
+
+.footer-title {
+    color: var(--rs-footer-heading);
+}
+
+.footer-desc,
+.footer-links a,
+.footer-wa-label,
+.footer-bottom {
+    color: var(--rs-footer-text);
+}
+
+.footer-links a {
+    color: var(--rs-footer-link);
+}
+
+.footer-links a:hover {
+    color: var(--rs-footer-heading);
+}
+
+.footer-social:hover {
+    background: var(--rs-footer-accent);
+}
+
+.footer-bottom strong {
+    color: var(--rs-footer-accent);
+}
+
+/* ---------- Buttons ---------------------------------------------- */
+.btn {
+    padding-inline: var(--rs-btn-pad-x);
+    border-radius: var(--rs-btn-radius);
+}
+
+.btn--dark {
+    background: var(--rs-btn-bg);
+    color: var(--rs-btn-text);
+}
+
+.btn--dark:hover {
+    background: var(--rs-btn-hover);
+    color: var(--rs-btn-text);
+}
+
+body[data-rs-button="outline"] .btn--dark {
+    background: transparent;
+    color: var(--rs-btn-bg);
+    box-shadow: inset 0 0 0 1.5px var(--rs-btn-bg);
+}
+
+body[data-rs-button="outline"] .btn--dark:hover {
+    background: var(--rs-btn-bg);
+    color: var(--rs-btn-text);
+}
+
+body[data-rs-button="soft"] .btn--dark {
+    background: var(--rs-btn-soft);
+    color: var(--rs-btn-bg);
+}
+
+body[data-rs-button="soft"] .btn--dark:hover {
+    background: var(--rs-btn-hover);
+    color: var(--rs-btn-text);
+}
+
+body[data-rs-btn-hover="lift"] .btn:hover {
+    transform: translateY(-2px);
+}
+
+body[data-rs-btn-hover="scale"] .btn:hover {
+    transform: scale(1.03);
+}
+
+body[data-rs-btn-hover="fade"] .btn:hover {
+    opacity: 0.86;
+}
+
+body[data-rs-btn-hover="none"] .btn:hover {
+    transform: none;
+    opacity: 1;
+}
