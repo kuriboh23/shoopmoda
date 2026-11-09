@@ -94,6 +94,19 @@ final class Icons
             'eye'            => '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
             'circle'         => '<circle cx="12" cy="12" r="9"/>',
             'gift'           => '<path d="M20 12v9H4v-9"/><path d="M2 7h20v5H2z"/><path d="M12 21V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>',
+            // RESKIN dashboard icons.
+            'palette'        => '<circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/><path d="M12 2a10 10 0 1 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.2 0-1.1.9-2 2-2h2.3A4.7 4.7 0 0 0 22 10.8C22 5.9 17.5 2 12 2z"/>',
+            'type'           => '<path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/>',
+            'cursor'         => '<path d="m4 3 7.1 17 2.4-7.3L21 10.4z"/>',
+            'layout'         => '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/>',
+            'panel'          => '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/>',
+            'sparkle'        => '<path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><path d="m6.3 6.3 2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/>',
+            'download'       => '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>',
+            'code'           => '<path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/>',
+            'power'          => '<path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><path d="M12 2v10"/>',
+            'monitor'        => '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/>',
+            'tablet'         => '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M12 18h.01"/>',
+            'smartphone'     => '<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M12 18h.01"/>',
         ];
     }
 }

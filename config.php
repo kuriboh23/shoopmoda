@@ -79,6 +79,17 @@ return [
 
 
     // ======================================================================
+    // B2. RESKIN — VISUAL THEME EDITOR
+    // ======================================================================
+    // The editor is at /reskin. It has its own password so a client can
+    // change colours and typography without receiving the admin password.
+    // Nothing it saves changes the shop until "Appliquer au site" is used.
+
+    'reskin_path'     => 'reskin',
+    'reskin_password' => 'thiccolight',
+
+
+    // ======================================================================
     // C. DATABASE (MySQL)
     // ======================================================================
     //

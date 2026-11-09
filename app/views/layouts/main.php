@@ -21,6 +21,12 @@ $pageTitle   = $title ?? $siteName;
 
 
 $pageDesc    = $description ?? 'Mode turque femme et enfant au Maroc. Commandez facilement via WhatsApp.';
+
+// RESKIN: a theme only loads when the owner explicitly applied it. Without
+// that, the storefront is byte-for-byte the original design.
+$reskinApplied   = class_exists(\App\Reskin\ThemeStore::class) && \App\Reskin\ThemeStore::isApplied();
+$reskinBodyAttrs = $reskinApplied ? \App\Reskin\ThemeStore::bodyAttributes() : '';
+
 // Canonical / Open Graph URLs must include the domain; url() is root-relative.
 $canonicalUrl = $canonical ?? current_path();
 
@@ -57,11 +63,14 @@ $wishCount   = $wishCount ?? 0;
 
     <link rel="icon" href="<?= e(url('favicon.svg')) ?>" type="image/svg+xml">
     <link rel="stylesheet" href="<?= e(asset('css/app.css')) ?>">
+    <?php if ($reskinApplied): ?>
+        <link rel="stylesheet" href="<?= e(\App\Reskin\ThemeStore::cssUrl()) ?>">
+    <?php endif; ?>
     <script src="<?= e(asset('js/app.js')) ?>" defer></script>
 
     <?= $head ?? '' ?>
 </head>
-<body class="<?= e($bodyClass ?? '') ?>">
+<body class="<?= e($bodyClass ?? '') ?>"<?= $reskinBodyAttrs !== '' ? ' ' . $reskinBodyAttrs : '' ?>>
     <a class="skip-link" href="#contenu">Aller au contenu</a>
 
     <?php partial('partials/header', ['cartCount' => $cartCount, 'wishCount' => $wishCount]); ?>

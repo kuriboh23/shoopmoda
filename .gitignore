@@ -8,6 +8,7 @@
 !/storage/cache/.gitkeep
 /storage/logs/*
 !/storage/logs/.gitkeep
+/storage/reskin/*
 /public/uploads/*
 !/public/uploads/.gitkeep
 

@@ -7,6 +7,7 @@ use App\Controllers\CartController;
 use App\Controllers\ErrorController;
 use App\Controllers\HomeController;
 use App\Controllers\ProductController;
+use App\Controllers\ReskinController;
 use App\Controllers\SearchController;
 use App\Controllers\WishlistController;
 use App\Core\Router;
@@ -72,6 +73,27 @@ $router->post($adminPath . '/categories/{id}/supprimer', [AdminController::class
 
 $router->get($adminPath . '/reglages', [AdminController::class, 'settings']);
 $router->post($adminPath . '/reglages', [AdminController::class, 'saveSettings']);
+
+// RESKIN — visual theme editor. Path and password live in config.php.
+$reskinPath = '/' . trim((string) config('reskin_path', 'reskin'), '/');
+
+$router->get($reskinPath . '/apercu', [ReskinController::class, 'preview']);
+$router->get($reskinPath . '/theme.css', [ReskinController::class, 'themeCss']);
+
+$router->get($reskinPath . '/connexion', [ReskinController::class, 'loginForm']);
+$router->post($reskinPath . '/connexion', [ReskinController::class, 'login']);
+$router->post($reskinPath . '/deconnexion', [ReskinController::class, 'logout']);
+
+$router->get($reskinPath, [ReskinController::class, 'dashboard']);
+$router->post($reskinPath . '/enregistrer', [ReskinController::class, 'save']);
+$router->post($reskinPath . '/reinitialiser', [ReskinController::class, 'reset']);
+$router->post($reskinPath . '/appliquer', [ReskinController::class, 'apply']);
+$router->post($reskinPath . '/desactiver', [ReskinController::class, 'disable']);
+$router->get($reskinPath . '/exporter', [ReskinController::class, 'export']);
+
+$router->post($reskinPath . '/themes', [ReskinController::class, 'saveTheme']);
+$router->post($reskinPath . '/themes/charger', [ReskinController::class, 'loadTheme']);
+$router->post($reskinPath . '/themes/supprimer', [ReskinController::class, 'deleteTheme']);
 
 // Anything else -> 404 page.
 $router->notFound([ErrorController::class, 'notFound']);
